@@ -15,10 +15,6 @@ dist-ssr
 .env.*
 !.env.example
 
-# Local agent tooling
-.agents/
-skills-lock.json
-
 # Supabase local CLI state
 supabase/.temp/
 

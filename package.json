@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "agent:preflight": "bash scripts/agent-preflight.sh",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

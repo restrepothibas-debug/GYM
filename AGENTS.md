@@ -43,6 +43,12 @@ IDE agents may not inherit shell environment variables. If an IDE does not read 
 
 MCP tools are usually loaded when the agent starts. If a running agent does not see Supabase, GitHub, or Vercel tools after these files exist, restart that agent from this project and run its MCP refresh/list command.
 
+## Process Standards
+
+Reusable operational flows are documented in `docs/AGENT_PROCESS_STANDARDS.md`.
+
+Before repeating GitHub, Supabase, deploy, commit, or security operations, read that file and follow the matching flow. If a new operational error happens or a manual process becomes repeatable, update that file in the same change so future agents do not repeat it.
+
 ## Required Context
 
 Before changing code, inspect the relevant project skills:
@@ -135,6 +141,8 @@ GITHUB_TOKEN
 ```
 
 Agents must source `.env.local` before using `gh`. A plain `gh auth status` may fail if the shell has not loaded `GH_TOKEN`.
+
+Git pushes must follow `docs/AGENT_PROCESS_STANDARDS.md`. Do not trust cached Git credentials; verify the active GitHub account before pushing.
 
 GitHub MCP is declared as a remote HTTP server in project config:
 

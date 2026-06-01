@@ -18,6 +18,31 @@ set +a
 
 Never print token values. `.env.local` is local-only and must not be committed.
 
+## Shared Tool Configuration
+
+Tool access must be discoverable from this repository, not only from one agent's global config.
+
+Project MCP configs are tracked here:
+
+- `.mcp.json`: generic/Claude-style project MCP config.
+- `.cursor/mcp.json`: Cursor project MCP config.
+- `.vscode/mcp.json`: VS Code/Copilot workspace MCP config.
+
+These files must only reference environment variables or secure IDE inputs. Do not hardcode tokens in them.
+
+Terminal agents must be launched from this repo after loading `.env.local`:
+
+```bash
+cd /Users/alexanderrestrepoepieyu/Desktop/gym
+set -a
+source .env.local
+set +a
+```
+
+IDE agents may not inherit shell environment variables. If an IDE does not read `.env.local`, use its secure MCP login/input prompt. VS Code's workspace MCP config uses secure prompts for Supabase and GitHub tokens.
+
+MCP tools are usually loaded when the agent starts. If a running agent does not see Supabase, GitHub, or Vercel tools after these files exist, restart that agent from this project and run its MCP refresh/list command.
+
 ## Required Context
 
 Before changing code, inspect the relevant project skills:
@@ -65,6 +90,12 @@ codex
 
 If MCP is unavailable in a session, use Supabase CLI with `.env.local` loaded. The local project must remain linked to `vuebqjashgcoexpihmko`.
 
+Supabase MCP is also declared in project config through `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json`. All declarations must remain scoped to:
+
+```text
+vuebqjashgcoexpihmko
+```
+
 ## Data Security Standard
 
 The database must be strict multi-tenant before production deploy.
@@ -104,6 +135,24 @@ GITHUB_TOKEN
 ```
 
 Agents must source `.env.local` before using `gh`. A plain `gh auth status` may fail if the shell has not loaded `GH_TOKEN`.
+
+GitHub MCP is declared as a remote HTTP server in project config:
+
+```text
+https://api.githubcopilot.com/mcp/
+```
+
+If a specific agent cannot use the remote GitHub MCP server, use `gh` CLI as the operational fallback. The local Docker-based GitHub MCP server is not available on this machine unless Docker or a compiled `github-mcp-server` binary is installed.
+
+## Vercel
+
+Vercel MCP is declared as a remote HTTP server in project config:
+
+```text
+https://mcp.vercel.com
+```
+
+Vercel MCP uses OAuth in supported agents. Vercel CLI deploys should use `VERCEL_TOKEN` from `.env.local` when available; do not pass tokens as command-line flags.
 
 ## Desktop Target
 

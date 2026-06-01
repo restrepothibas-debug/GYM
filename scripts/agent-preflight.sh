@@ -23,6 +23,24 @@ has_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+check_json() {
+  file="$1"
+  if [ -f "$file" ]; then
+    ok "$file present"
+    if has_cmd node; then
+      if node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" "$file" >/dev/null 2>&1; then
+        ok "$file valid JSON"
+      else
+        bad "$file invalid JSON"
+      fi
+    else
+      warn "node not found; skipping JSON validation for $file"
+    fi
+  else
+    bad "$file missing"
+  fi
+}
+
 printf 'Agent preflight for %s\n' "$ROOT_DIR"
 
 if [ -f ".env.local" ]; then
@@ -43,6 +61,52 @@ for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF VITE_SUPABASE_URL GH_TOKE
     bad "$name missing"
   fi
 done
+
+for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+  value="${!name:-}"
+  if [ -n "$value" ]; then
+    ok "$name set"
+  else
+    warn "$name missing; Vercel MCP OAuth can still work, but Vercel CLI deploy/link may need it"
+  fi
+done
+
+check_json ".mcp.json"
+check_json ".cursor/mcp.json"
+check_json ".vscode/mcp.json"
+
+if [ -f ".env.example" ]; then
+  ok ".env.example present"
+else
+  bad ".env.example missing"
+fi
+
+for file in .mcp.json .cursor/mcp.json .vscode/mcp.json; do
+  if [ -f "$file" ]; then
+    if grep -q "vuebqjashgcoexpihmko\\|SUPABASE_PROJECT_REF" "$file"; then
+      ok "$file points to Supabase project vuebqjashgcoexpihmko"
+    else
+      bad "$file does not point to Supabase project vuebqjashgcoexpihmko"
+    fi
+    if grep -q "https://api.githubcopilot.com/mcp/" "$file"; then
+      ok "$file includes GitHub MCP"
+    else
+      bad "$file missing GitHub MCP"
+    fi
+    if grep -q "https://mcp.vercel.com" "$file"; then
+      ok "$file includes Vercel MCP"
+    else
+      bad "$file missing Vercel MCP"
+    fi
+  fi
+done
+
+secret_pattern='(s''bp_|github_''pat_|g''hp_|g''ho_|g''hu_|g''hs_|g''hr_|v''ca_)'
+if grep -REn "$secret_pattern" .mcp.json .cursor/mcp.json .vscode/mcp.json .env.example AGENTS.md >/dev/null 2>&1; then
+  bad "tracked agent config appears to contain a literal secret pattern"
+else
+  ok "tracked agent config does not contain known literal secret patterns"
+fi
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   ok "git repository detected"
@@ -70,7 +134,13 @@ else
 fi
 
 if has_cmd codex; then
-  codex mcp list || warn "codex mcp list failed"
+  codex_mcp_output="$(codex mcp list 2>&1)"
+  printf '%s\n' "$codex_mcp_output"
+  if printf '%s\n' "$codex_mcp_output" | grep -q "vuebqjashgcoexpihmko"; then
+    ok "Codex global Supabase MCP points to vuebqjashgcoexpihmko"
+  else
+    warn "Codex global MCP list did not show vuebqjashgcoexpihmko; project MCP config still exists"
+  fi
 else
   warn "codex CLI not found"
 fi
@@ -110,6 +180,21 @@ if has_cmd gh; then
   fi
 else
   bad "GitHub CLI gh not found"
+fi
+
+if has_cmd vercel; then
+  printf 'vercel version: %s\n' "$(vercel --version 2>/dev/null || printf 'unknown')"
+  ok "Vercel CLI found"
+else
+  warn "Vercel CLI not found"
+fi
+
+if has_cmd docker; then
+  ok "Docker found for optional local GitHub MCP"
+elif has_cmd github-mcp-server; then
+  ok "github-mcp-server binary found for optional local GitHub MCP"
+else
+  warn "Docker/github-mcp-server not found; use remote GitHub MCP or gh CLI"
 fi
 
 exit "$fail"

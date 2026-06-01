@@ -70,6 +70,71 @@ Estado esperado:
 
 No debe quedar `[ahead N]`, `[behind N]` ni cambios pendientes no explicados.
 
+## Flujo: Conectar Supabase MCP en Codex
+
+Problema que ya ocurrio:
+
+- `codex mcp login supabase` abre un flujo OAuth en navegador.
+- El navegador puede estar autenticado con una cuenta diferente a la que se usa en este proyecto.
+- Eso puede conectar Codex al tenant/cuenta equivocado aunque el project ref sea correcto.
+
+Regla:
+
+Para este proyecto no usar OAuth/browser como primer camino. Supabase MCP debe configurarse en Codex con `SUPABASE_ACCESS_TOKEN` desde `.env.local`.
+
+Pasos estandar:
+
+1. Confirmar que `.env.local` tiene el token y el project ref sin imprimir secretos.
+
+```bash
+set -a
+source .env.local >/dev/null 2>&1
+set +a
+test -n "$SUPABASE_ACCESS_TOKEN" && echo "SUPABASE_ACCESS_TOKEN=set"
+echo "SUPABASE_PROJECT_REF=$SUPABASE_PROJECT_REF"
+```
+
+El project ref esperado es:
+
+```text
+vuebqjashgcoexpihmko
+```
+
+2. Configurar Codex MCP con bearer token por variable de entorno.
+
+```bash
+codex mcp remove supabase
+codex mcp add supabase --url 'https://mcp.supabase.com/mcp?project_ref=vuebqjashgcoexpihmko' --bearer-token-env-var SUPABASE_ACCESS_TOKEN
+```
+
+3. Verificar que Codex no quedo en OAuth.
+
+```bash
+codex mcp list
+codex mcp get supabase
+```
+
+Estado esperado:
+
+```text
+Bearer Token Env Var: SUPABASE_ACCESS_TOKEN
+Auth: Bearer token
+```
+
+4. Iniciar Codex desde el repo con `.env.local` cargado.
+
+```bash
+cd /Users/alexanderrestrepoepieyu/Desktop/gym
+set -a
+source .env.local
+set +a
+codex
+```
+
+5. Dentro de Codex, ejecutar `/mcp` y verificar que `supabase` aparece activo.
+
+No ejecutar `codex mcp login supabase` salvo que el usuario pida explicitamente usar OAuth y confirme la cuenta correcta en el navegador.
+
 ## Flujo: Preparar un commit
 
 Pasos estandar:

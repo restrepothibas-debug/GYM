@@ -77,10 +77,12 @@ Problema que ya ocurrio:
 - `codex mcp login supabase` abre un flujo OAuth en navegador.
 - El navegador puede estar autenticado con una cuenta diferente a la que se usa en este proyecto.
 - Eso puede conectar Codex al tenant/cuenta equivocado aunque el project ref sea correcto.
+- El usuario tiene dos cuentas de Supabase. Una conexion MCP global puede ser valida para otra cuenta, pero incorrecta para este repo.
+- Este repo espera exclusivamente el proyecto `aivttuylquomdzsmhfcs`.
 
 Regla:
 
-Para este proyecto no usar OAuth/browser como primer camino. Supabase MCP debe configurarse en Codex con `SUPABASE_ACCESS_TOKEN` desde `.env.local`.
+Para este proyecto no usar OAuth/browser como primer camino ni confiar en un MCP global existente. Supabase MCP debe configurarse desde este repo con `SUPABASE_ACCESS_TOKEN` de `.env.local`, y ese token debe tener acceso a `aivttuylquomdzsmhfcs`.
 
 Pasos estandar:
 
@@ -97,17 +99,18 @@ echo "SUPABASE_PROJECT_REF=$SUPABASE_PROJECT_REF"
 El project ref esperado es:
 
 ```text
-vuebqjashgcoexpihmko
+aivttuylquomdzsmhfcs
 ```
 
-2. Configurar Codex MCP con bearer token por variable de entorno.
+2. Configurar Codex MCP con el fix del proyecto.
 
 ```bash
-codex mcp remove supabase
-codex mcp add supabase --url 'https://mcp.supabase.com/mcp?project_ref=vuebqjashgcoexpihmko' --bearer-token-env-var SUPABASE_ACCESS_TOKEN
+npm run codex:mcp:fix
 ```
 
-3. Verificar que Codex no quedo en OAuth.
+Si este comando falla con `SUPABASE_ACCESS_TOKEN cannot access aivttuylquomdzsmhfcs`, reemplazar `SUPABASE_ACCESS_TOKEN` en `.env.local` por un token de la cuenta correcta antes de continuar.
+
+3. Verificar que Codex no quedo en OAuth ni en el proyecto equivocado.
 
 ```bash
 codex mcp list
@@ -121,6 +124,12 @@ Bearer Token Env Var: SUPABASE_ACCESS_TOKEN
 Auth: Bearer token
 ```
 
+La URL debe contener:
+
+```text
+project_ref=aivttuylquomdzsmhfcs
+```
+
 4. Iniciar Codex desde el repo con `.env.local` cargado.
 
 ```bash
@@ -131,7 +140,7 @@ set +a
 codex
 ```
 
-5. Dentro de Codex, ejecutar `/mcp` y verificar que `supabase` aparece activo.
+5. Dentro de Codex, ejecutar `/mcp` y verificar que `supabase` aparece activo con `aivttuylquomdzsmhfcs`.
 
 No ejecutar `codex mcp login supabase` salvo que el usuario pida explicitamente usar OAuth y confirme la cuenta correcta en el navegador.
 

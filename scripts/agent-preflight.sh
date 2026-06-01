@@ -4,6 +4,9 @@ set -u
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR" || exit 1
 
+EXPECTED_SUPABASE_PROJECT_REF="aivttuylquomdzsmhfcs"
+EXPECTED_SUPABASE_URL="https://${EXPECTED_SUPABASE_PROJECT_REF}.supabase.co"
+
 fail=0
 
 ok() {
@@ -83,10 +86,10 @@ fi
 
 for file in .mcp.json .cursor/mcp.json .vscode/mcp.json; do
   if [ -f "$file" ]; then
-    if grep -q "vuebqjashgcoexpihmko\\|SUPABASE_PROJECT_REF" "$file"; then
-      ok "$file points to Supabase project vuebqjashgcoexpihmko"
+    if grep -q "${EXPECTED_SUPABASE_PROJECT_REF}\\|SUPABASE_PROJECT_REF" "$file"; then
+      ok "$file points to Supabase project ${EXPECTED_SUPABASE_PROJECT_REF}"
     else
-      bad "$file does not point to Supabase project vuebqjashgcoexpihmko"
+      bad "$file does not point to Supabase project ${EXPECTED_SUPABASE_PROJECT_REF}"
     fi
     if grep -q "https://api.githubcopilot.com/mcp/" "$file"; then
       ok "$file includes GitHub MCP"
@@ -136,10 +139,11 @@ fi
 if has_cmd codex; then
   codex_mcp_output="$(codex mcp list 2>&1)"
   printf '%s\n' "$codex_mcp_output"
-  if printf '%s\n' "$codex_mcp_output" | grep -q "vuebqjashgcoexpihmko"; then
-    ok "Codex global Supabase MCP points to vuebqjashgcoexpihmko"
+  if printf '%s\n' "$codex_mcp_output" | grep -q "$EXPECTED_SUPABASE_PROJECT_REF" &&
+    printf '%s\n' "$codex_mcp_output" | grep -q "SUPABASE_ACCESS_TOKEN"; then
+    ok "Codex Supabase MCP points to ${EXPECTED_SUPABASE_PROJECT_REF} with SUPABASE_ACCESS_TOKEN"
   else
-    warn "Codex global MCP list did not show vuebqjashgcoexpihmko; project MCP config still exists"
+    bad "Codex Supabase MCP is not bound to ${EXPECTED_SUPABASE_PROJECT_REF}; run npm run codex:mcp:fix and restart Codex from this repo"
   fi
 else
   warn "codex CLI not found"
@@ -147,21 +151,26 @@ fi
 
 if has_cmd supabase; then
   printf 'supabase version: %s\n' "$(supabase --version)"
-  if [ "${SUPABASE_PROJECT_REF:-}" = "vuebqjashgcoexpihmko" ]; then
+  if [ "${SUPABASE_PROJECT_REF:-}" = "$EXPECTED_SUPABASE_PROJECT_REF" ]; then
     ok "Supabase project ref matches expected project"
   else
-    bad "Supabase project ref does not match vuebqjashgcoexpihmko"
+    bad "Supabase project ref does not match ${EXPECTED_SUPABASE_PROJECT_REF}"
   fi
-  if [ -f "supabase/.temp/project-ref" ] && grep -qx "vuebqjashgcoexpihmko" "supabase/.temp/project-ref"; then
-    ok "Supabase CLI linked to vuebqjashgcoexpihmko"
+  if [ "${VITE_SUPABASE_URL:-}" = "$EXPECTED_SUPABASE_URL" ]; then
+    ok "VITE_SUPABASE_URL matches expected project"
+  else
+    bad "VITE_SUPABASE_URL does not match ${EXPECTED_SUPABASE_URL}"
+  fi
+  if [ -f "supabase/.temp/project-ref" ] && grep -qx "$EXPECTED_SUPABASE_PROJECT_REF" "supabase/.temp/project-ref"; then
+    ok "Supabase CLI linked to ${EXPECTED_SUPABASE_PROJECT_REF}"
   else
     bad "Supabase CLI link missing or points to another project"
   fi
   if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
-    if supabase projects list -o json 2>/dev/null | grep -q '"ref": "vuebqjashgcoexpihmko"'; then
-      ok "Supabase API token can access vuebqjashgcoexpihmko"
+    if supabase projects list -o json 2>/dev/null | grep -q "\"ref\": \"${EXPECTED_SUPABASE_PROJECT_REF}\""; then
+      ok "Supabase API token can access ${EXPECTED_SUPABASE_PROJECT_REF}"
     else
-      bad "Supabase API token could not verify access to vuebqjashgcoexpihmko"
+      bad "Supabase API token could not verify access to ${EXPECTED_SUPABASE_PROJECT_REF}; replace SUPABASE_ACCESS_TOKEN in .env.local with a token from the correct Supabase account"
     fi
   fi
 else

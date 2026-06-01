@@ -69,16 +69,24 @@ Use the matching skill for the task. Key installed skills include:
 Project ref:
 
 ```text
-vuebqjashgcoexpihmko
+aivttuylquomdzsmhfcs
 ```
 
 Remote URL:
 
 ```text
-https://vuebqjashgcoexpihmko.supabase.co
+https://aivttuylquomdzsmhfcs.supabase.co
 ```
 
-Codex MCP is configured globally as a streamable HTTP server using:
+The user has more than one Supabase account. A global Supabase MCP connection can be valid for another project and still be wrong here.
+
+For this repo, fix Codex MCP from the project before using Supabase tools:
+
+```bash
+npm run codex:mcp:fix
+```
+
+Codex MCP must be configured as a streamable HTTP server using:
 
 ```text
 SUPABASE_ACCESS_TOKEN
@@ -94,12 +102,12 @@ set +a
 codex
 ```
 
-If MCP is unavailable in a session, use Supabase CLI with `.env.local` loaded. The local project must remain linked to `vuebqjashgcoexpihmko`.
+If MCP is unavailable in a session, use Supabase CLI with `.env.local` loaded. The local project must remain linked to `aivttuylquomdzsmhfcs`, and `SUPABASE_ACCESS_TOKEN` must be from the Supabase account that can access that project.
 
 Supabase MCP is also declared in project config through `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json`. All declarations must remain scoped to:
 
 ```text
-vuebqjashgcoexpihmko
+aivttuylquomdzsmhfcs
 ```
 
 ## Data Security Standard

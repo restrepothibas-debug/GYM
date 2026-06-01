@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "agent:preflight": "bash scripts/agent-preflight.sh",
+    "codex:mcp:fix": "bash scripts/codex-mcp-fix.sh",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

@@ -3,7 +3,7 @@
     {
       "type": "promptString",
       "id": "supabase_access_token",
-      "description": "Supabase access token for project aivttuylquomdzsmhfcs",
+      "description": "Supabase access token for project vuebqjashgcoexpihmko",
       "password": true
     },
     {
@@ -16,7 +16,7 @@
   "servers": {
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=aivttuylquomdzsmhfcs",
+      "url": "https://mcp.supabase.com/mcp?project_ref=vuebqjashgcoexpihmko",
       "headers": {
         "Authorization": "Bearer ${input:supabase_access_token}"
       }

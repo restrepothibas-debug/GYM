@@ -69,13 +69,13 @@ Use the matching skill for the task. Key installed skills include:
 Project ref:
 
 ```text
-aivttuylquomdzsmhfcs
+vuebqjashgcoexpihmko
 ```
 
 Remote URL:
 
 ```text
-https://aivttuylquomdzsmhfcs.supabase.co
+https://vuebqjashgcoexpihmko.supabase.co
 ```
 
 The user has more than one Supabase account. A global Supabase MCP connection can be valid for another project and still be wrong here.
@@ -102,12 +102,12 @@ set +a
 codex
 ```
 
-If MCP is unavailable in a session, use Supabase CLI with `.env.local` loaded. The local project must remain linked to `aivttuylquomdzsmhfcs`, and `SUPABASE_ACCESS_TOKEN` must be from the Supabase account that can access that project.
+If MCP is unavailable in a session, use Supabase CLI with `.env.local` loaded. The local project must remain linked to `vuebqjashgcoexpihmko`, and `SUPABASE_ACCESS_TOKEN` must be from the Supabase account that can access that project.
 
 Supabase MCP is also declared in project config through `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json`. All declarations must remain scoped to:
 
 ```text
-aivttuylquomdzsmhfcs
+vuebqjashgcoexpihmko
 ```
 
 ## Data Security Standard

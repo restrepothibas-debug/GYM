@@ -1,7 +1,8 @@
 import { useState, useContext } from 'react';
 import { X, Check, Wallet, Trash2, Plus } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
-import { addDaysToDateString, getDaysRemaining, getTodayDateFormatted, getTodayDateString } from '../lib/dateUtils';
+import { formatCurrency, getMemberDebtBreakdown, PRODUCT_PAYMENT_METHOD_LABELS } from '../lib/accounting';
+import { getDaysRemaining, getTodayDateFormatted, getTodayDateString } from '../lib/dateUtils';
 
 const PRESETS_PLANES = {
   diario:     { name: 'Pase Diario',       durationDays: 1,   price: 5000 },
@@ -12,13 +13,22 @@ const PRESETS_PLANES = {
 };
 
 function BottomSheet({ memberId, onClose }) {
-  const { members, setMembers, addCheckin, payMemberBalance, products, sellProduct, checkinsToday, setCheckinsToday } = useContext(GymContext);
+  const {
+    addCheckin,
+    checkinsToday,
+    deleteMember,
+    members,
+    payMemberBalance,
+    products,
+    renewMemberPlan,
+    sellProduct,
+  } = useContext(GymContext);
   const initialMember = members.find(m => m.id === memberId);
   const [paymentAmount, setPaymentAmount] = useState(() => (
     initialMember?.balance < 0 ? String(Math.abs(initialMember.balance)) : ''
   ));
   const [manualDate, setManualDate] = useState(getTodayDateString());
-  const [productPayMethod, setProductPayMethod] = useState('monedero');
+  const [productPayMethod, setProductPayMethod] = useState('credito');
 
   const member = initialMember;
   if (!member) return null;
@@ -26,62 +36,47 @@ function BottomSheet({ memberId, onClose }) {
   const today = getTodayDateString();
   const alreadyCheckedIn = checkinsToday.some(c => c.memberId === memberId && c.date === today);
   const daysLeft = getDaysRemaining(member.expiryDate);
+  const debtBreakdown = getMemberDebtBreakdown(member);
 
   // ── Asistencia en 1 clic ──
   const handleTodayCheckin = () => {
     if (alreadyCheckedIn) return;
-    addCheckin(memberId);
+    void addCheckin(memberId);
   };
 
   // ── Asistencia manual ──
-  const handleManualCheckin = () => {
+  const handleManualCheckin = async () => {
     const attendance = Array.isArray(member.attendance) ? member.attendance : [];
     if (!manualDate || attendance.includes(manualDate)) return;
-    setMembers(prev => prev.map(m =>
-      m.id === memberId ? { ...m, attendance: [manualDate, ...(Array.isArray(m.attendance) ? m.attendance : [])] } : m
-    ));
-    if (manualDate === today) {
-      addCheckin(memberId);
-    }
+    await addCheckin(memberId, manualDate);
   };
 
   // ── Registrar pago / abono ──
-  const handlePayment = () => {
+  const handlePayment = async () => {
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) return;
-    payMemberBalance(memberId, amount);
-    setPaymentAmount('');
+    const paid = await payMemberBalance(memberId, amount);
+    if (paid) setPaymentAmount('');
   };
 
   // ── Renovar plan ──
-  const handleRenew = (planKey) => {
+  const handleRenew = async (planKey) => {
     const plan = PRESETS_PLANES[planKey];
-    const baseDate = daysLeft > 0 ? member.expiryDate : today;
-    const newExpiry = addDaysToDateString(baseDate, plan.durationDays);
     const nextBalance = member.balance - plan.price;
-
-    setMembers(prev => prev.map(m =>
-      m.id === memberId ? { ...m, plan: planKey, expiryDate: newExpiry, balance: m.balance - plan.price } : m
-    ));
-    setPaymentAmount(nextBalance < 0 ? String(Math.abs(nextBalance)) : '');
+    const renewed = await renewMemberPlan(memberId, planKey, plan);
+    if (renewed) setPaymentAmount(nextBalance < 0 ? String(Math.abs(nextBalance)) : '');
   };
 
   // ── Vender producto desde el panel ──
-  const handleSellProduct = (productId) => {
-    const product = products.find(p => p.id === productId);
-    const sold = sellProduct(productId, memberId, productPayMethod);
-    if (sold && productPayMethod === 'monedero' && product) {
-      const nextBalance = member.balance - product.price;
-      setPaymentAmount(nextBalance < 0 ? String(Math.abs(nextBalance)) : '');
-    }
+  const handleSellProduct = async (productId) => {
+    await sellProduct(productId, memberId, productPayMethod);
   };
 
-  // ── Dar de baja ──
-  const handleDelete = () => {
-    if (window.confirm(`¿Eliminar definitivamente a ${member.name}?`)) {
-      setMembers(prev => prev.filter(m => m.id !== memberId));
-      setCheckinsToday(prev => prev.filter(c => c.memberId !== memberId));
-      onClose();
+  // ── Eliminar usuario activo ──
+  const handleDelete = async () => {
+    if (window.confirm(`¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`)) {
+      const removed = await deleteMember(memberId);
+      if (removed) onClose();
     }
   };
 
@@ -101,10 +96,11 @@ function BottomSheet({ memberId, onClose }) {
           </button>
         </div>
 
-        {/* ── Balance / Expiración ── */}
+        {/* Membership balance is intentionally separate from product credit debt.
+            The total debt card below combines both sources for operational clarity. */}
         <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
           <div>
-            <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Monedero</span>
+            <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Saldo Membresia</span>
             <span className={`text-sm font-black ${member.balance < 0 ? 'text-rose-400' : member.balance > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
               {member.balance < 0 ? `-$${Math.abs(member.balance).toLocaleString()}` : `$${member.balance.toLocaleString()}`}
             </span>
@@ -115,6 +111,33 @@ function BottomSheet({ memberId, onClose }) {
               {member.plan} · {daysLeft < 0 ? 'Vencido' : `${daysLeft}d`}
             </span>
           </div>
+        </div>
+
+        <div className="space-y-2 bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Detalle de Deuda</span>
+            <span className={`text-xs font-black ${debtBreakdown.totalDebt > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {debtBreakdown.totalDebt > 0 ? formatCurrency(debtBreakdown.totalDebt) : 'Al dia'}
+            </span>
+          </div>
+          {debtBreakdown.totalDebt === 0 ? (
+            <p className="text-[10px] text-slate-500">Sin deudas de membresia ni productos a credito.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {debtBreakdown.membershipDebt > 0 && (
+                <div className="flex items-center justify-between gap-3 text-[10px]">
+                  <span className="text-slate-400">Membresia / plan pendiente</span>
+                  <strong className="text-rose-400 shrink-0">{formatCurrency(debtBreakdown.membershipDebt)}</strong>
+                </div>
+              )}
+              {debtBreakdown.productItems.map((product, index) => (
+                <div key={`${product.name}-${product.date || 'producto'}-${index}`} className="flex items-center justify-between gap-3 text-[10px]">
+                  <span className="text-slate-400 truncate">Producto a credito: {product.name}</span>
+                  <strong className="text-rose-400 shrink-0">{formatCurrency(product.due)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Asistencia ── */}
@@ -167,7 +190,7 @@ function BottomSheet({ memberId, onClose }) {
         {/* ── Liquidar / Abonar ── */}
         <div className="space-y-2 bg-slate-950 border border-indigo-500/20 rounded-xl p-3.5">
           <div className="flex justify-between items-center">
-            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Liquidar Saldo o Compras</span>
+            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Abonar Membresia</span>
             <span className={`text-[9px] font-bold ${member.balance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
               {member.balance < 0 ? `Debe $${Math.abs(member.balance).toLocaleString()}` : 'Al día'}
             </span>
@@ -229,7 +252,12 @@ function BottomSheet({ memberId, onClose }) {
             ) : (
               [...member.products].reverse().map((product, index) => (
                 <div key={`${product.name}-${index}`} className="flex items-center justify-between gap-3 py-1 text-[11px] border-b border-slate-900 last:border-b-0">
-                  <span className="truncate">{product.name}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{product.name}</span>
+                    <span className="block text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                      {PRODUCT_PAYMENT_METHOD_LABELS[product.method] || product.method}
+                    </span>
+                  </span>
                   <span className="font-bold text-indigo-400 shrink-0">${product.price.toLocaleString()}</span>
                 </div>
               ))
@@ -237,17 +265,21 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
-        {/* ── Venta de Productos ── */}
+        {/* ── Productos del Socio ── */}
         <div className="space-y-2">
-          <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest block">Vender Producto al Socio</span>
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest block">Producto al Socio</span>
+          <div className="grid grid-cols-3 gap-2 mb-2">
             <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
-              <input type="radio" name="ppm" value="monedero" checked={productPayMethod === 'monedero'} onChange={() => setProductPayMethod('monedero')} className="accent-indigo-500" />
-              <span className="text-[10px] font-bold text-slate-300">Cargar a Monedero</span>
+              <input type="radio" name="ppm" value="credito" checked={productPayMethod === 'credito'} onChange={() => setProductPayMethod('credito')} className="accent-indigo-500" />
+              <span className="text-[10px] font-bold text-slate-300">Credito</span>
             </label>
             <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
               <input type="radio" name="ppm" value="efectivo" checked={productPayMethod === 'efectivo'} onChange={() => setProductPayMethod('efectivo')} className="accent-indigo-500" />
-              <span className="text-[10px] font-bold text-slate-300">Pago Directo (Caja)</span>
+              <span className="text-[10px] font-bold text-slate-300">Efectivo</span>
+            </label>
+            <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
+              <input type="radio" name="ppm" value="tarjeta" checked={productPayMethod === 'tarjeta'} onChange={() => setProductPayMethod('tarjeta')} className="accent-indigo-500" />
+              <span className="text-[10px] font-bold text-slate-300">Tarjeta</span>
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -267,10 +299,10 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
-        {/* ── Dar de baja ── */}
+        {/* ── Eliminar usuario ── */}
         <button onClick={handleDelete}
           className="w-full h-10 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-          <Trash2 className="w-4 h-4" /> Dar de baja membresía
+          <Trash2 className="w-4 h-4" /> Eliminar usuario
         </button>
 
       </div>

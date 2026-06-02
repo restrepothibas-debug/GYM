@@ -4,7 +4,7 @@ set -u
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR" || exit 1
 
-EXPECTED_SUPABASE_PROJECT_REF="aivttuylquomdzsmhfcs"
+EXPECTED_SUPABASE_PROJECT_REF="vuebqjashgcoexpihmko"
 EXPECTED_SUPABASE_URL="https://${EXPECTED_SUPABASE_PROJECT_REF}.supabase.co"
 
 fail=0

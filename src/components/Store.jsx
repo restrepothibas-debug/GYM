@@ -7,15 +7,20 @@ function Store() {
   const { products, members, sellProduct } = useContext(GymContext);
   const [sellModal, setSellModal] = useState(null); // { product }
   const [selectedMember, setSelectedMember] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('monedero');
+  const [paymentMethod, setPaymentMethod] = useState('credito');
   const [addProductOpen, setAddProductOpen] = useState(false);
+  const [selling, setSelling] = useState(false);
 
-  const handleSell = () => {
+  const handleSell = async () => {
     if (!selectedMember) return;
-    sellProduct(sellModal.id, selectedMember, paymentMethod);
-    setSellModal(null);
-    setSelectedMember('');
-    setPaymentMethod('monedero');
+    setSelling(true);
+    const sold = await sellProduct(sellModal.id, selectedMember, paymentMethod);
+    setSelling(false);
+    if (sold) {
+      setSellModal(null);
+      setSelectedMember('');
+      setPaymentMethod('credito');
+    }
   };
 
   return (
@@ -51,7 +56,7 @@ function Store() {
                   <span className="font-extrabold text-xs text-indigo-400 mt-1 block">${p.price.toLocaleString()}</span>
                 </div>
                 <button
-                  onClick={() => { setSellModal(p); setSelectedMember(''); }}
+                  onClick={() => { setSellModal(p); setSelectedMember(''); setPaymentMethod('credito'); }}
                   disabled={p.stock === 0}
                   className="w-full h-8 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -87,23 +92,25 @@ function Store() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 2: Método de Cobro *</label>
+                <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 2: Tipo de Registro *</label>
                 <select
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value)}
                   className="w-full h-10 px-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
                 >
-                  <option value="monedero">Cargar a su Monedero (Afecta saldo)</option>
-                  <option value="efectivo">Pago en Efectivo (Ingresa a Caja directo)</option>
-                  <option value="tarjeta">Pago con Tarjeta (Ingresa a Caja directo)</option>
+                  <option value="credito">A Credito (deuda de producto)</option>
+                  <option value="efectivo">Pagar ahora en efectivo</option>
+                  <option value="tarjeta">Pagar ahora con tarjeta</option>
                 </select>
               </div>
               <button
                 onClick={handleSell}
-                disabled={!selectedMember}
+                disabled={!selectedMember || selling}
                 className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg"
               >
-                Completar Venta — ${sellModal.price.toLocaleString()}
+                {selling
+                  ? 'Procesando...'
+                  : `${paymentMethod === 'credito' ? 'Asignar a Credito' : 'Registrar Pago'} — $${sellModal.price.toLocaleString()}`}
               </button>
             </div>
           </div>

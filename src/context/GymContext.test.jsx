@@ -5,7 +5,7 @@ import { GymProvider, GymContext } from './GymContext';
 
 // Un componente de prueba para interactuar con el contexto
 function TestComponent() {
-  const { members, products, cashFlow, sellProduct, addMember } = useContext(GymContext);
+  const { members, products, cashFlow, sellProduct, addMember, deleteMember } = useContext(GymContext);
   
   return (
     <div>
@@ -16,8 +16,9 @@ function TestComponent() {
       {products[0] && <span data-testid="product-stock">{products[0].stock}</span>}
 
       <button onClick={() => addMember({ name: 'Nuevo', doc: '123' }, 20000, 0)} data-testid="btn-add-member">Add Member</button>
-      <button onClick={() => sellProduct('p1', 'm1', 'monedero')} data-testid="btn-sell-wallet">Sell Wallet</button>
+      <button onClick={() => sellProduct('p1', 'm1', 'credito')} data-testid="btn-credit-product">Credit Product</button>
       <button onClick={() => sellProduct('p1', 'm1', 'efectivo')} data-testid="btn-sell-cash">Sell Cash</button>
+      <button onClick={() => deleteMember('m1')} data-testid="btn-delete-member">Delete Member</button>
     </div>
   );
 }
@@ -58,7 +59,7 @@ describe('GymContext (Fase 2 - Lógica de Negocio)', () => {
     expect(screen.getByTestId('member-balance').textContent).toBe('-20000');
   });
 
-  it('sellProduct debe descontar stock y afectar el monedero o cashflow según el método', () => {
+  it('sellProduct debe descontar stock sin afectar saldo y registrar cashflow solo con pago directo', () => {
     // Estado inicial pre-cargado
     localStorage.setItem('gym_members', JSON.stringify([{ id: 'm1', name: 'Socio 1', balance: 0 }]));
     localStorage.setItem('gym_products', JSON.stringify([{ id: 'p1', name: 'Prod 1', price: 4000, stock: 10 }]));
@@ -69,14 +70,14 @@ describe('GymContext (Fase 2 - Lógica de Negocio)', () => {
       </GymProvider>
     );
 
-    // Venta con monedero
+    // Producto a credito: baja stock y queda como deuda de producto, pero no altera members.balance.
     act(() => {
-      screen.getByTestId('btn-sell-wallet').click();
+      screen.getByTestId('btn-credit-product').click();
     });
 
-    expect(screen.getByTestId('product-stock').textContent).toBe('9'); // Stock bajó 1
-    expect(screen.getByTestId('member-balance').textContent).toBe('-4000'); // Monedero restó el precio
-    expect(screen.getByTestId('cash-count').textContent).toBe('0'); // No entró efectivo directo
+    expect(screen.getByTestId('product-stock').textContent).toBe('9');
+    expect(screen.getByTestId('member-balance').textContent).toBe('0');
+    expect(screen.getByTestId('cash-count').textContent).toBe('0');
 
     // Venta con efectivo
     act(() => {
@@ -84,7 +85,23 @@ describe('GymContext (Fase 2 - Lógica de Negocio)', () => {
     });
 
     expect(screen.getByTestId('product-stock').textContent).toBe('8'); // Stock bajó otro
-    expect(screen.getByTestId('member-balance').textContent).toBe('-4000'); // Balance no cambió más
-    expect(screen.getByTestId('cash-count').textContent).toBe('1'); // Registró ingreso a caja
+    expect(screen.getByTestId('member-balance').textContent).toBe('0');
+    expect(screen.getByTestId('cash-count').textContent).toBe('1');
+  });
+
+  it('deleteMember debe ocultar el socio activo', () => {
+    localStorage.setItem('gym_members', JSON.stringify([{ id: 'm1', name: 'Socio 1', balance: 0 }]));
+
+    render(
+      <GymProvider>
+        <TestComponent />
+      </GymProvider>
+    );
+
+    act(() => {
+      screen.getByTestId('btn-delete-member').click();
+    });
+
+    expect(screen.getByTestId('members-count').textContent).toBe('0');
   });
 });

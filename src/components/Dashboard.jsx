@@ -1,13 +1,14 @@
 import { useContext } from 'react';
 import { Zap, History, CheckCircle } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
+import { formatCurrency, getMemberDebtBreakdown } from '../lib/accounting';
 import { getDaysRemaining } from '../lib/dateUtils';
 
 function Dashboard({ openBottomSheet, onCheckinFeedback }) {
   const { members, checkinsToday, addCheckin } = useContext(GymContext);
 
   const activeCount = members.filter(m => getDaysRemaining(m.expiryDate) >= 0).length;
-  const totalDebt = members.reduce((sum, m) => m.balance < 0 ? sum + Math.abs(m.balance) : sum, 0);
+  const totalDebt = members.reduce((sum, member) => sum + getMemberDebtBreakdown(member).totalDebt, 0);
   const frequentMembers = members.slice(0, 4);
 
   const handleExpressCheckin = (e, member) => {
@@ -91,7 +92,7 @@ function Dashboard({ openBottomSheet, onCheckinFeedback }) {
         </div>
         <div className="bg-slate-900 border border-slate-800/60 p-3 rounded-2xl flex flex-col justify-between">
           <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Por Cobrar</span>
-          <span className="text-xs font-black text-rose-400 mt-2 block truncate">${totalDebt.toLocaleString()}</span>
+          <span className="text-xs font-black text-rose-400 mt-2 block truncate">{formatCurrency(totalDebt)}</span>
         </div>
       </section>
 

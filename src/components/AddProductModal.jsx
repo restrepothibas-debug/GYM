@@ -1,23 +1,31 @@
-import { useRef, useContext } from 'react';
+import { useRef, useContext, useState } from 'react';
 import { Package, X } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
 
 function AddProductModal({ onClose }) {
-  const { setProducts } = useContext(GymContext);
+  const { addProduct } = useContext(GymContext);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const nameRef  = useRef();
   const priceRef = useRef();
   const stockRef = useRef();
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    const newProduct = {
-      id:    crypto.randomUUID(),
+    setSaving(true);
+    const saved = await addProduct({
       name:  nameRef.current.value.trim(),
       price: parseFloat(priceRef.current.value),
       stock: parseInt(stockRef.current.value),
-    };
-    setProducts(prev => [newProduct, ...prev]);
-    onClose();
+    });
+
+    if (saved) {
+      onClose();
+      return;
+    }
+
+    setError('No se pudo registrar el producto.');
+    setSaving(false);
   };
 
   return (
@@ -32,6 +40,12 @@ function AddProductModal({ onClose }) {
         </div>
 
         <form onSubmit={handleSave} className="p-4 space-y-4">
+          {error && (
+            <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-300">
+              {error}
+            </p>
+          )}
+
           <div className="space-y-1">
             <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Nombre del Producto *</label>
             <input ref={nameRef} type="text" required placeholder="Ej. Gatorade Fresa 500ml"
@@ -49,9 +63,9 @@ function AddProductModal({ onClose }) {
                 className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
           </div>
-          <button type="submit"
-            className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all">
-            Registrar Inventario
+          <button type="submit" disabled={saving}
+            className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all">
+            {saving ? 'Guardando...' : 'Registrar Inventario'}
           </button>
         </form>
       </div>

@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "qa:operational": "node scripts/operational-qa.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

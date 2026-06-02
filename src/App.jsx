@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from 'react';
-import { Dumbbell, UserPlus, CheckCircle, Users, ShoppingBag, CreditCard, Search, X, Sparkles, ChevronRight } from 'lucide-react';
+import { Dumbbell, UserPlus, CheckCircle, Users, ShoppingBag, CreditCard, Search, X, Sparkles, ChevronRight, LogOut, Loader2, ShieldAlert, RefreshCw } from 'lucide-react';
 import { GymContext } from './context/GymContext';
 import Dashboard from './components/Dashboard';
 import Members from './components/Members';
@@ -7,7 +7,63 @@ import Store from './components/Store';
 import Payments from './components/Payments';
 import BottomSheet from './components/BottomSheet';
 import AddMemberModal from './components/AddMemberModal';
-import { getDaysRemaining } from './lib/dateUtils';
+import AuthGate from './components/AuthGate';
+import { formatCurrency, getMemberDebtBreakdown } from './lib/accounting';
+import { getDaysRemaining, getTodayDateString } from './lib/dateUtils';
+
+function isLicenseUsable(license) {
+  if (!license) return false;
+  if (!['active', 'trial'].includes(license.status)) return false;
+  if (license.expires_on && license.expires_on < getTodayDateString()) return false;
+  return true;
+}
+
+function AccountLoadingScreen({ canSignOut, error, onRetry, onSignOut }) {
+  return (
+    <div data-theme="office" className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-2xl">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+            <Loader2 className={`w-6 h-6 ${error ? '' : 'animate-spin'}`} />
+          </span>
+          <div>
+            <h1 className="text-sm font-black text-white">Preparando cuenta</h1>
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              Validando sesion, tenant, licencia y permisos de acceso.
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[10px] font-bold text-rose-300 leading-relaxed">
+            {error}
+          </div>
+        )}
+
+        {error && (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reintentar
+            </button>
+            <button
+              type="button"
+              onClick={onSignOut}
+              disabled={!canSignOut}
+              className="h-10 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-xs font-black disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cerrar sesion
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -16,13 +72,29 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [quickFeedback, setQuickFeedback] = useState(null);
 
-  // Todo el estado ahora viene de GymContext
-  const { members, products, cashFlow, checkinsToday } = useContext(GymContext);
+  const {
+    activeLicense,
+    activeTenant,
+    authLoading,
+    cashFlow,
+    checkinsToday,
+    clearError,
+    dataLoading,
+    error,
+    isRemoteEnabled,
+    members,
+    products,
+    refreshWorkspace,
+    session,
+    signOut,
+    workspaceLoaded,
+    workspaceLoading,
+  } = useContext(GymContext);
   const cleanSearch = searchQuery.trim().toLowerCase();
   const searchResults = cleanSearch
     ? members.filter(member =>
         member.name.toLowerCase().includes(cleanSearch) ||
-        member.doc.includes(cleanSearch)
+        String(member.doc || '').includes(cleanSearch)
       )
     : [];
 
@@ -40,13 +112,58 @@ function App() {
   const handleCheckinFeedback = (member) => {
     setQuickFeedback({
       member,
+      debtBreakdown: getMemberDebtBreakdown(member),
       daysLeft: getDaysRemaining(member.expiryDate),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
   };
 
+  if (isRemoteEnabled && (authLoading || workspaceLoading || (session && !workspaceLoaded))) {
+    // Post-login loading must always be recoverable. If Supabase/Auth/RLS fails,
+    // show the captured error here instead of sending users to tenant creation.
+    return (
+      <AccountLoadingScreen
+        canSignOut={Boolean(session)}
+        error={error}
+        onRetry={session ? refreshWorkspace : () => window.location.reload()}
+        onSignOut={signOut}
+      />
+    );
+  }
+
+  if (isRemoteEnabled && (!session || !activeTenant)) {
+    return <AuthGate />;
+  }
+
+  if (isRemoteEnabled && activeTenant && !isLicenseUsable(activeLicense)) {
+    return (
+      <div data-theme="office" className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+              <ShieldAlert className="w-5 h-5" />
+            </span>
+            <div>
+              <h1 className="text-sm font-black text-white">Licencia no activa</h1>
+              <p className="text-[10px] text-slate-500">{activeTenant.name}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Estado actual: <strong className="text-rose-300">{activeLicense?.status || 'sin licencia'}</strong>
+          </p>
+          <button
+            onClick={signOut}
+            className="w-full h-10 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-xs font-black"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-slate-950 text-slate-100 font-sans antialiased h-full min-h-screen flex flex-col select-none">
+    <div data-theme="office" className="bg-slate-950 text-slate-100 font-sans antialiased h-full min-h-screen flex flex-col select-none">
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -55,21 +172,50 @@ function App() {
           </div>
           <div>
             <span className="font-black text-sm tracking-tight block bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">GYM-FLOW</span>
-            <span className="text-[8px] text-indigo-400 tracking-widest font-black uppercase block">Gestión Inteligente</span>
+            <span className="text-[8px] text-indigo-400 tracking-widest font-black uppercase block truncate max-w-[150px]">
+              {activeTenant?.name || 'Gestión Inteligente'}
+            </span>
           </div>
         </div>
 
-        <button 
-          onClick={() => setIsAddMemberModalOpen(true)}
-          className="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-2 text-xs font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Inscribir</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {isRemoteEnabled && (
+            <button
+              onClick={signOut}
+              aria-label="Cerrar sesión"
+              className="h-9 w-9 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setIsAddMemberModalOpen(true)}
+            className="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-2 text-xs font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Inscribir</span>
+          </button>
+        </div>
       </header>
 
       {/* MAIN CONTENT */}
       <main className="p-4 max-w-md mx-auto w-full flex-1 pb-28 space-y-4 overflow-y-auto">
+        {error && (
+          <div className="bg-rose-950/40 border border-rose-500/20 text-rose-200 rounded-xl p-3 flex items-start justify-between gap-3 text-[10px] font-bold">
+            <span>{error}</span>
+            <button onClick={clearError} className="text-rose-300 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {dataLoading && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+            Sincronizando datos
+          </div>
+        )}
+
         {quickFeedback && (
           <div className="bg-slate-900 border border-emerald-500/30 p-4 rounded-2xl shadow-2xl space-y-2.5 animate-fadeIn">
             <div className="flex items-center justify-between">
@@ -83,10 +229,10 @@ function App() {
                 <h3 className="font-bold text-sm text-white truncate">{quickFeedback.member.name}</h3>
                 <p className="text-[10px] text-slate-400">
                   Vence en: <strong className="text-slate-200">{quickFeedback.daysLeft} dias</strong> · Saldo:{' '}
-                  <strong className={quickFeedback.member.balance < 0 ? 'text-rose-400 font-extrabold' : 'text-slate-200'}>
-                    {quickFeedback.member.balance < 0
-                      ? `Debe $${Math.abs(quickFeedback.member.balance).toLocaleString()}`
-                      : `Saldo $${quickFeedback.member.balance.toLocaleString()}`}
+                  <strong className={quickFeedback.debtBreakdown.totalDebt > 0 ? 'text-rose-400 font-extrabold' : 'text-slate-200'}>
+                    {quickFeedback.debtBreakdown.totalDebt > 0
+                      ? `Debe ${formatCurrency(quickFeedback.debtBreakdown.totalDebt)}`
+                      : `Saldo ${formatCurrency(quickFeedback.member.balance)}`}
                   </strong>
                 </p>
               </div>

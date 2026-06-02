@@ -14,15 +14,17 @@ const PRESETS_PLANES = {
 function AddMemberModal({ onClose }) {
   const { addMember, members } = useContext(GymContext);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const nameRef    = useRef();
   const docRef     = useRef();
   const phoneRef   = useRef();
   const planRef    = useRef();
-  const balanceRef = useRef();
+  const initialPaymentRef = useRef();
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    setSaving(true);
     const plan = planRef.current.value;
     const preset = PRESETS_PLANES[plan];
 
@@ -31,6 +33,7 @@ function AddMemberModal({ onClose }) {
 
     if (members.some(member => member.doc === doc)) {
       setError('La identificacion ya se encuentra registrada.');
+      setSaving(false);
       return;
     }
 
@@ -42,12 +45,17 @@ function AddMemberModal({ onClose }) {
       expiryDate,
     };
 
-    const initialBalance = parseFloat(balanceRef.current.value) || 0;
-    const saved = addMember(memberData, preset.price, initialBalance);
+    // Enrollment money contract:
+    // `initialPayment` is cash/card received at signup, not wallet credit.
+    // Member balance is computed as payment minus plan price:
+    //   0 = paid in full, negative = receivable/debt, positive = credit in favor.
+    const initialPayment = parseFloat(initialPaymentRef.current.value) || 0;
+    const saved = await addMember(memberData, preset.price, initialPayment);
     if (saved) {
       onClose();
     } else {
       setError('No se pudo registrar el socio.');
+      setSaving(false);
     }
   };
 
@@ -97,14 +105,17 @@ function AddMemberModal({ onClose }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Monedero Inicial ($)</label>
-              <input ref={balanceRef} type="number" defaultValue="0"
+              <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Pago Inicial Recibido ($)</label>
+              <input ref={initialPaymentRef} type="number" min="0" defaultValue="0"
                 className="w-full h-10 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
           </div>
-          <button type="submit"
-            className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all">
-            Registrar Socio y Cobrar
+          <p className="text-[9px] text-slate-500 leading-relaxed">
+            Si el pago es igual al plan, el socio queda al día. Si paga menos, queda saldo por cobrar; si paga de más, queda crédito a favor.
+          </p>
+          <button type="submit" disabled={saving}
+            className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all">
+            {saving ? 'Guardando...' : 'Registrar Socio y Cobrar'}
           </button>
         </form>
       </div>

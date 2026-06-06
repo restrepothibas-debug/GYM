@@ -1,42 +1,71 @@
-import { useState, useContext } from 'react';
-import { X, Check, Wallet, Trash2, Plus } from 'lucide-react';
+import { useState, useContext, useEffect, useId, useRef } from 'react';
+import { X, Check, Wallet, Trash2, Plus, Fingerprint } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
+import { useUi } from '../context/UiContext';
 import { formatCurrency, getMemberDebtBreakdown, PRODUCT_PAYMENT_METHOD_LABELS } from '../lib/accounting';
-import { getDaysRemaining, getTodayDateFormatted, getTodayDateString } from '../lib/dateUtils';
-
-const PRESETS_PLANES = {
-  diario:     { name: 'Pase Diario',       durationDays: 1,   price: 5000 },
-  semanal:    { name: 'Plan Semanal',       durationDays: 7,   price: 20000 },
-  mensual:    { name: 'Mensualidad',        durationDays: 30,  price: 60000 },
-  trimestral: { name: 'Plan Trimestral',    durationDays: 90,  price: 150000 },
-  anual:      { name: 'Plan Anual',         durationDays: 365, price: 500000 },
-};
+import { formatMembershipStatus, getTodayDateFormatted, getTodayDateString } from '../lib/dateUtils';
+import { DEFAULT_MEMBERSHIP_PLANS, getActiveMembershipPlans } from '../lib/membershipPlans';
 
 function BottomSheet({ memberId, onClose }) {
+  const { confirm, notify } = useUi();
   const {
     addCheckin,
+    adjustMemberMembershipDays,
     checkinsToday,
     deleteMember,
+    enrollMemberBiometric,
+    getMemberBiometricEnrollment,
     members,
-    payMemberBalance,
+    membershipEvents,
+    membershipPlans,
+    payMemberDebt,
     products,
     renewMemberPlan,
+    revokeMemberBiometric,
     sellProduct,
+    verifyMemberBiometric,
   } = useContext(GymContext);
   const initialMember = members.find(m => m.id === memberId);
   const [paymentAmount, setPaymentAmount] = useState(() => (
     initialMember?.balance < 0 ? String(Math.abs(initialMember.balance)) : ''
   ));
+  const [paymentTarget, setPaymentTarget] = useState('auto');
+  const [dayAdjustment, setDayAdjustment] = useState('');
+  const [dayAdjustmentReason, setDayAdjustmentReason] = useState('');
   const [manualDate, setManualDate] = useState(getTodayDateString());
   const [productPayMethod, setProductPayMethod] = useState('credito');
+  const panelTitleId = useId();
+  const closeButtonRef = useRef(null);
 
   const member = initialMember;
+
+  useEffect(() => {
+    if (!member) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Desktop/tablet users should land inside the dialog immediately. Mobile
+    // keeps focus unchanged to avoid unnecessary viewport jumps.
+    if (window.matchMedia?.('(min-width: 48rem)').matches) {
+      closeButtonRef.current?.focus();
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [member, onClose]);
+
   if (!member) return null;
 
   const today = getTodayDateString();
   const alreadyCheckedIn = checkinsToday.some(c => c.memberId === memberId && c.date === today);
-  const daysLeft = getDaysRemaining(member.expiryDate);
+  const membershipStatus = formatMembershipStatus(member.expiryDate);
   const debtBreakdown = getMemberDebtBreakdown(member);
+  const activePlans = getActiveMembershipPlans(membershipPlans.length ? membershipPlans : DEFAULT_MEMBERSHIP_PLANS);
+  const memberMembershipEvents = membershipEvents.filter(event => event.memberId === memberId).slice(0, 5);
+  const biometricEnrollment = getMemberBiometricEnrollment(memberId);
 
   // ── Asistencia en 1 clic ──
   const handleTodayCheckin = () => {
@@ -51,20 +80,72 @@ function BottomSheet({ memberId, onClose }) {
     await addCheckin(memberId, manualDate);
   };
 
+  const handleEnrollBiometric = async () => {
+    const confirmed = await confirm({
+      title: 'Registrar huella',
+      message: `${member.name} debe aceptar el registro biométrico. No se guardan imágenes de huella; solo el template del proveedor configurado.`,
+      confirmLabel: 'Registrar huella',
+      tone: 'default',
+    });
+    if (!confirmed) return;
+
+    const result = await enrollMemberBiometric(memberId);
+    notify({
+      title: result.ok ? 'Huella registrada' : 'No se registró la huella',
+      message: result.ok ? `${member.name} ya puede ingresar por huella.` : result.error,
+      tone: result.ok ? 'success' : 'warning',
+    });
+  };
+
+  const handleVerifyBiometric = async () => {
+    const result = await verifyMemberBiometric(memberId);
+    notify({
+      title: result.ok ? 'Huella verificada' : 'Verificación fallida',
+      message: result.ok ? `${member.name} coincide con el lector activo.` : result.error,
+      tone: result.ok ? 'success' : 'warning',
+    });
+  };
+
+  const handleRevokeBiometric = async () => {
+    const confirmed = await confirm({
+      title: 'Revocar huella',
+      message: `¿Revocar la huella activa de ${member.name}? El acceso biométrico se desactiva y el template se limpia.`,
+      confirmLabel: 'Revocar huella',
+    });
+    if (!confirmed) return;
+
+    const result = await revokeMemberBiometric(memberId);
+    notify({
+      title: result.ok ? 'Huella revocada' : 'No se pudo revocar',
+      message: result.ok ? `${member.name} ya no tiene huella activa.` : result.error,
+      tone: result.ok ? 'success' : 'warning',
+    });
+  };
+
   // ── Registrar pago / abono ──
   const handlePayment = async () => {
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) return;
-    const paid = await payMemberBalance(memberId, amount);
+    const paid = await payMemberDebt(memberId, amount, paymentTarget);
     if (paid) setPaymentAmount('');
   };
 
   // ── Renovar plan ──
-  const handleRenew = async (planKey) => {
-    const plan = PRESETS_PLANES[planKey];
+  const handleRenew = async (plan) => {
+    const planKey = plan.planKey;
     const nextBalance = member.balance - plan.price;
     const renewed = await renewMemberPlan(memberId, planKey, plan);
     if (renewed) setPaymentAmount(nextBalance < 0 ? String(Math.abs(nextBalance)) : '');
+  };
+
+  const handleAdjustDays = async () => {
+    const parsedDays = Number(dayAdjustment);
+    if (!parsedDays) return;
+    const adjusted = await adjustMemberMembershipDays(memberId, parsedDays, dayAdjustmentReason.trim());
+    if (adjusted) {
+      setDayAdjustment('');
+      setDayAdjustmentReason('');
+    }
   };
 
   // ── Vender producto desde el panel ──
@@ -74,25 +155,48 @@ function BottomSheet({ memberId, onClose }) {
 
   // ── Eliminar usuario activo ──
   const handleDelete = async () => {
-    if (window.confirm(`¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`)) {
+    const confirmed = await confirm({
+      title: 'Eliminar usuario activo',
+      message: `¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`,
+      confirmLabel: 'Eliminar usuario',
+    });
+    if (confirmed) {
       const removed = await deleteMember(memberId);
-      if (removed) onClose();
+      if (removed) {
+        notify({
+          title: 'Usuario eliminado',
+          message: `${member.name} ya no aparece en usuarios activos.`,
+          tone: 'success',
+        });
+        onClose();
+      }
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-end justify-center p-0">
-      <div className="bg-slate-900 border-t border-slate-800 rounded-t-3xl w-full max-w-md p-5 pb-8 space-y-4 max-h-[90vh] overflow-y-auto animate-slideUp">
+    <div className="member-panel-overlay">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={panelTitleId}
+        className="member-panel animate-slideUp"
+      >
 
         {/* ── Cabecera ── */}
         <div className="flex items-start justify-between">
           <div>
             <span className="text-[8px] font-black bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full uppercase tracking-widest">Panel del Atleta</span>
-            <h3 className="text-sm font-black text-white mt-1">{member.name}</h3>
+            <h3 id={panelTitleId} className="text-sm font-black text-white mt-1">{member.name}</h3>
             <p className="text-[10px] text-slate-500">C.C. {member.doc} · {member.phone || 'Sin teléfono'}</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 bg-slate-950 rounded-full flex items-center justify-center text-slate-400 hover:text-white shrink-0">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            ref={closeButtonRef}
+            onClick={onClose}
+            className="app-icon-button w-8 h-8 bg-slate-950 rounded-full flex items-center justify-center text-slate-400 hover:text-white shrink-0"
+            aria-label="Cerrar panel del socio"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -107,9 +211,10 @@ function BottomSheet({ memberId, onClose }) {
           </div>
           <div>
             <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Plan / Expiración</span>
-            <span className={`text-xs font-semibold capitalize ${daysLeft < 0 ? 'text-rose-400' : daysLeft <= 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {member.plan} · {daysLeft < 0 ? 'Vencido' : `${daysLeft}d`}
+            <span className={`text-xs font-semibold capitalize ${membershipStatus.tone === 'danger' ? 'text-rose-400' : membershipStatus.tone === 'warning' ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {member.plan} · {membershipStatus.label}
             </span>
+            <small className="text-[8px] text-slate-500 block mt-0.5">Vence: {member.expiryDate}</small>
           </div>
         </div>
 
@@ -148,15 +253,16 @@ function BottomSheet({ memberId, onClose }) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
+              type="button"
               onClick={handleTodayCheckin}
               disabled={alreadyCheckedIn}
-              className={`h-10 text-white text-xs font-extrabold rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
+              className={`app-control h-10 text-white text-xs font-extrabold rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
                 alreadyCheckedIn
                   ? 'bg-emerald-600/30 text-emerald-400 cursor-default border border-emerald-500/30'
                   : 'bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/10'
               }`}
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4" aria-hidden="true" />
               {alreadyCheckedIn ? 'Ya registrado' : 'Asistir Hoy (1-Clic)'}
             </button>
             <div className="flex border border-slate-800 rounded-lg overflow-hidden bg-slate-900">
@@ -167,6 +273,7 @@ function BottomSheet({ memberId, onClose }) {
                 className="bg-transparent text-slate-200 text-[10px] px-2 py-1 focus:outline-none w-full cursor-pointer"
               />
               <button
+                type="button"
                 onClick={handleManualCheckin}
                 className="px-2.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold border-l border-slate-700 active:scale-95 transition-all"
               >
@@ -187,13 +294,71 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
-        {/* ── Liquidar / Abonar ── */}
-        <div className="space-y-2 bg-slate-950 border border-indigo-500/20 rounded-xl p-3.5">
-          <div className="flex justify-between items-center">
-            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Abonar Membresia</span>
-            <span className={`text-[9px] font-bold ${member.balance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {member.balance < 0 ? `Debe $${Math.abs(member.balance).toLocaleString()}` : 'Al día'}
+        <div className="member-biometric-card">
+          <div className="member-biometric-card__header">
+            <span className="member-biometric-card__title">
+              <Fingerprint className="w-3.5 h-3.5" aria-hidden="true" />
+              Huella digital
             </span>
+            <span className={`member-biometric-card__status ${biometricEnrollment ? 'member-biometric-card__status--active' : ''}`}>
+              {biometricEnrollment ? 'Activa' : 'Sin registro'}
+            </span>
+          </div>
+          <div className="member-biometric-card__actions">
+            <button
+              type="button"
+              onClick={handleEnrollBiometric}
+              className="app-button app-button--secondary"
+            >
+              {biometricEnrollment ? 'Reenrolar' : 'Enrolar'}
+            </button>
+            <button
+              type="button"
+              onClick={handleVerifyBiometric}
+              disabled={!biometricEnrollment}
+              className="app-button app-button--secondary"
+            >
+              Verificar
+            </button>
+            <button
+              type="button"
+              onClick={handleRevokeBiometric}
+              disabled={!biometricEnrollment}
+              className="app-button app-button--secondary app-button--biometric-danger"
+            >
+              Revocar
+            </button>
+          </div>
+        </div>
+
+        {/* ── Liquidar / Abonar ── */}
+        <div className="member-payment-card">
+          <div className="flex justify-between items-center">
+            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Registrar pago</span>
+            <span className={`text-[9px] font-bold ${debtBreakdown.totalDebt > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {debtBreakdown.totalDebt > 0 ? `Debe ${formatCurrency(debtBreakdown.totalDebt)}` : 'Al día'}
+            </span>
+          </div>
+          <div className="member-payment-targets" role="radiogroup" aria-label="Destino del pago">
+            {[
+              { key: 'auto', label: 'Auto', detail: 'Membresia y productos' },
+              { key: 'membership', label: 'Membresia', detail: formatCurrency(debtBreakdown.membershipDebt) },
+              { key: 'products', label: 'Productos', detail: formatCurrency(debtBreakdown.productDebt) },
+            ].map(option => (
+              <label key={option.key} className={`member-payment-target ${paymentTarget === option.key ? 'member-payment-target--selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="paymentTarget"
+                  value={option.key}
+                  checked={paymentTarget === option.key}
+                  onChange={() => setPaymentTarget(option.key)}
+                />
+                <span>
+                  <strong>{option.label}</strong>
+                  <small>{option.detail}</small>
+                </span>
+              </label>
+            ))}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1">
@@ -207,17 +372,17 @@ function BottomSheet({ memberId, onClose }) {
               />
             </div>
             <button
+              type="button"
               onClick={handlePayment}
-              className="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-lg flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-emerald-600/20"
+              className="app-control h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-lg flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-emerald-600/20"
             >
-              <Wallet className="w-4 h-4" />Registrar
+              <Wallet className="w-4 h-4" aria-hidden="true" />Registrar
             </button>
           </div>
-          {/* Abonos rápidos */}
           <div className="grid grid-cols-3 gap-2 pt-1">
             {[5000, 20000, 50000].map(v => (
-              <button key={v} onClick={() => setPaymentAmount(String((parseFloat(paymentAmount) || 0) + v))}
-                className="h-8 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 font-extrabold text-[10px] rounded-lg active:scale-95 transition-all">
+              <button key={v} type="button" onClick={() => setPaymentAmount(String((parseFloat(paymentAmount) || 0) + v))}
+                className="app-control h-8 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 font-extrabold text-[10px] rounded-lg active:scale-95 transition-all">
                 + ${v.toLocaleString()}
               </button>
             ))}
@@ -225,21 +390,72 @@ function BottomSheet({ memberId, onClose }) {
         </div>
 
         {/* ── Renovaciones ── */}
-        <div className="space-y-1.5">
+        <div className="member-renewal-section">
           <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest block">Renovación de Membresías</span>
-          <div className="grid grid-cols-4 gap-1.5">
-            {Object.entries(PRESETS_PLANES).filter(([k]) => k !== 'anual').map(([key, plan]) => (
-              <button key={key} onClick={() => handleRenew(key)}
-                className="h-12 bg-slate-950 hover:bg-indigo-950/30 border border-slate-800 hover:border-indigo-500/30 rounded-xl p-1 flex flex-col justify-center items-center transition-all active:scale-95">
-                <span className="font-bold text-slate-300 text-[9px] text-center capitalize leading-tight">{plan.name.split(' ')[1] || plan.name}</span>
-                <span className="font-black text-indigo-400 text-[9px] mt-0.5">${(plan.price/1000).toFixed(0)}k</span>
+          <div className="member-renewal-grid">
+            {activePlans.map(plan => (
+              <button key={plan.planKey} type="button" onClick={() => handleRenew(plan)}
+                className="member-renewal-option">
+                <span className="font-bold text-slate-300 text-[9px] text-center capitalize leading-tight">{plan.name}</span>
+                <span className="font-black text-indigo-400 text-[9px] mt-0.5">${(plan.price / 1000).toFixed(0)}k</span>
               </button>
             ))}
-            <button onClick={() => handleRenew('anual')}
-              className="h-12 bg-slate-950 hover:bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-1 flex flex-col justify-center items-center transition-all active:scale-95">
-              <span className="font-bold text-indigo-300 text-[9px] text-center">Anual ⚡</span>
-              <span className="font-black text-indigo-400 text-[9px] mt-0.5">$500k</span>
+          </div>
+        </div>
+
+        <div className="member-adjustment-card">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Ajuste auditado de días</span>
+            <span className="text-[8px] text-slate-500 font-bold">Actual: {member.expiryDate}</span>
+          </div>
+          <div className="member-adjustment-row">
+            <input
+              type="number"
+              value={dayAdjustment}
+              onChange={event => setDayAdjustment(event.target.value)}
+              placeholder="+7 / -1"
+              className="member-adjustment-days"
+            />
+            <input
+              type="text"
+              value={dayAdjustmentReason}
+              onChange={event => setDayAdjustmentReason(event.target.value)}
+              placeholder="Motivo operativo"
+              className="member-adjustment-reason"
+            />
+            <button
+              type="button"
+              onClick={handleAdjustDays}
+              disabled={!dayAdjustment}
+              className="app-button app-button--secondary member-adjustment-save"
+            >
+              Ajustar
             </button>
+          </div>
+        </div>
+
+        <div className="member-history-section">
+          <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest block">Historial de membresía</span>
+          <div className="member-history-list">
+            {memberMembershipEvents.length === 0 ? (
+              <span className="text-[10px] text-slate-500">Sin eventos de membresía registrados.</span>
+            ) : (
+              memberMembershipEvents.map(event => (
+                <div key={event.id} className="flex items-center justify-between gap-3 py-1 text-[10px] border-b border-slate-900 last:border-b-0">
+                  <span className="min-w-0">
+                    <span className="block text-slate-300 font-bold truncate">
+                      {event.eventType === 'manual_adjustment' ? 'Ajuste manual' : event.eventType === 'renewal' ? 'Renovación' : 'Inscripción'}
+                    </span>
+                    <span className="block text-[8px] text-slate-500 truncate">
+                      {event.previousExpiryDate || 'Inicio'} → {event.newExpiryDate}
+                    </span>
+                  </span>
+                  <strong className={`shrink-0 ${event.durationDays < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {event.durationDays > 0 ? '+' : ''}{event.durationDays || 0}d
+                  </strong>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -286,13 +502,13 @@ function BottomSheet({ memberId, onClose }) {
             {products.length === 0
               ? <p className="col-span-2 text-[9px] text-slate-500">Sin productos en tienda.</p>
               : products.map(p => (
-                  <button key={p.id} onClick={() => handleSellProduct(p.id)} disabled={p.stock === 0}
+                  <button key={p.id} type="button" onClick={() => handleSellProduct(p.id)} disabled={p.stock === 0}
                     className="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between gap-2 text-left transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
                     <div className="truncate">
                       <p className="text-[10px] font-bold text-slate-200 truncate">{p.name}</p>
                       <p className="text-[9px] text-indigo-400 font-black">${p.price.toLocaleString()}</p>
                     </div>
-                    <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
                   </button>
                 ))
             }
@@ -300,9 +516,9 @@ function BottomSheet({ memberId, onClose }) {
         </div>
 
         {/* ── Eliminar usuario ── */}
-        <button onClick={handleDelete}
+        <button type="button" onClick={handleDelete}
           className="w-full h-10 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-          <Trash2 className="w-4 h-4" /> Eliminar usuario
+          <Trash2 className="w-4 h-4" aria-hidden="true" /> Eliminar usuario
         </button>
 
       </div>

@@ -1,0 +1,142 @@
+-- Member biometric standard
+-- -------------------------
+-- This schema supports multiple fingerprint hardware vendors without binding
+-- the app to one SDK. It stores tenant-scoped metadata and encrypted templates
+-- only; raw fingerprint images or unciphered biometric templates must never be
+-- persisted in the database or frontend localStorage.
+
+create unique index if not exists members_tenant_member_unique
+  on public.members (tenant_id, id);
+
+create table if not exists public.member_biometrics (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
+  member_id uuid not null references public.members(id) on delete cascade,
+  provider text not null check (provider in ('mock', 'secugen', 'digitalpersona', 'zkteco', 'suprema')),
+  device_model text,
+  template_format text not null check (char_length(trim(template_format)) >= 2),
+  template_encrypted text,
+  finger_label text not null default 'right_index',
+  status text not null default 'active' check (status in ('active', 'revoked')),
+  consent_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint member_biometrics_member_same_tenant
+    foreign key (tenant_id, member_id)
+    references public.members (tenant_id, id)
+    on delete cascade,
+  constraint member_biometrics_revocation_state
+    check (
+      (status = 'active' and revoked_at is null)
+      or (status = 'revoked' and revoked_at is not null and template_encrypted is null)
+    )
+);
+
+-- One active enrollment per member/finger/provider avoids ambiguous 1:1
+-- verification while still preserving revoked audit records.
+create unique index if not exists member_biometrics_active_unique
+  on public.member_biometrics (tenant_id, member_id, provider, finger_label)
+  where status = 'active';
+
+create index if not exists member_biometrics_tenant_member_idx
+  on public.member_biometrics (tenant_id, member_id, status);
+
+create index if not exists member_biometrics_provider_idx
+  on public.member_biometrics (tenant_id, provider, status);
+
+alter table public.member_biometrics enable row level security;
+
+drop policy if exists member_biometrics_select on public.member_biometrics;
+drop policy if exists member_biometrics_insert on public.member_biometrics;
+drop policy if exists member_biometrics_update on public.member_biometrics;
+
+create policy member_biometrics_select on public.member_biometrics
+  for select to authenticated
+  using (app_private.has_tenant_access(tenant_id));
+
+create policy member_biometrics_insert on public.member_biometrics
+  for insert to authenticated
+  with check (
+    app_private.has_tenant_access(tenant_id)
+    and exists (
+      select 1
+      from public.members m
+      where m.id = member_id
+        and m.tenant_id = member_biometrics.tenant_id
+        and m.status = 'active'
+    )
+  );
+
+create policy member_biometrics_update on public.member_biometrics
+  for update to authenticated
+  using (app_private.has_tenant_access(tenant_id))
+  with check (
+    app_private.has_tenant_access(tenant_id)
+    and exists (
+      select 1
+      from public.members m
+      where m.id = member_id
+        and m.tenant_id = member_biometrics.tenant_id
+    )
+  );
+
+-- Security boundary:
+-- `template_encrypted` is intentionally write-only for the authenticated API
+-- role. PostgREST/Supabase applies column grants before returning data, so
+-- tenant users can list enrollment metadata without receiving biometric
+-- payloads. Keep this block column-scoped; do not replace it with a table-wide
+-- `grant select` because RLS only filters rows, not sensitive columns.
+revoke all on public.member_biometrics from anon;
+revoke all on public.member_biometrics from authenticated;
+
+grant select (
+  id,
+  tenant_id,
+  member_id,
+  provider,
+  device_model,
+  template_format,
+  finger_label,
+  status,
+  consent_at,
+  revoked_at,
+  created_at,
+  updated_at
+) on public.member_biometrics to authenticated;
+
+grant insert (
+  tenant_id,
+  member_id,
+  provider,
+  device_model,
+  template_format,
+  template_encrypted,
+  finger_label,
+  status,
+  consent_at
+) on public.member_biometrics to authenticated;
+
+grant update (
+  provider,
+  device_model,
+  template_format,
+  template_encrypted,
+  finger_label,
+  status,
+  revoked_at,
+  updated_at
+) on public.member_biometrics to authenticated;
+
+comment on table public.member_biometrics is
+  'Tenant-scoped fingerprint enrollment metadata. Store encrypted biometric templates only; never raw images or raw templates.';
+comment on column public.member_biometrics.provider is
+  'Hardware adapter identifier: mock, secugen, digitalpersona, zkteco or suprema.';
+comment on column public.member_biometrics.template_encrypted is
+  'Encrypted template payload generated by a trusted adapter/backend. Null after revocation.';
+comment on column public.member_biometrics.finger_label is
+  'Human-readable finger slot such as right_index. Used to avoid ambiguous active enrollments.';
+comment on column public.member_biometrics.consent_at is
+  'Timestamp when the member accepted biometric enrollment.';
+comment on column public.member_biometrics.revoked_at is
+  'Timestamp when biometric access was revoked and template payload was cleared.';

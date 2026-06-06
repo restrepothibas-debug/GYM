@@ -1,13 +1,17 @@
 import { useState, useContext, useEffect } from 'react';
-import { Dumbbell, UserPlus, CheckCircle, Users, ShoppingBag, CreditCard, Search, X, Sparkles, ChevronRight, LogOut, Loader2, ShieldAlert, RefreshCw } from 'lucide-react';
+import { BarChart3, Building2, Dumbbell, Fingerprint, Settings, UserPlus, CheckCircle, Users, ShoppingBag, CreditCard, Search, X, Sparkles, ChevronRight, LogOut, Loader2, ShieldAlert, RefreshCw } from 'lucide-react';
 import { GymContext } from './context/GymContext';
 import Dashboard from './components/Dashboard';
 import Members from './components/Members';
 import Store from './components/Store';
 import Payments from './components/Payments';
+import Accounting from './components/Accounting';
 import BottomSheet from './components/BottomSheet';
 import AddMemberModal from './components/AddMemberModal';
 import AuthGate from './components/AuthGate';
+import BiometricCheckinModal from './components/BiometricCheckinModal';
+import BiometricSettingsModal from './components/BiometricSettingsModal';
+import GymIdentityModal from './components/GymIdentityModal';
 import { formatCurrency, getMemberDebtBreakdown } from './lib/accounting';
 import { getDaysRemaining, getTodayDateString } from './lib/dateUtils';
 
@@ -45,9 +49,9 @@ function AccountLoadingScreen({ canSignOut, error, onRetry, onSignOut }) {
             <button
               type="button"
               onClick={onRetry}
-              className="h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black flex items-center justify-center gap-2"
+              className="app-primary-action h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black flex items-center justify-center gap-2"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" aria-hidden="true" />
               Reintentar
             </button>
             <button
@@ -68,6 +72,9 @@ function AccountLoadingScreen({ canSignOut, error, onRetry, onSignOut }) {
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isBiometricCheckinModalOpen, setIsBiometricCheckinModalOpen] = useState(false);
+  const [isBiometricSettingsModalOpen, setIsBiometricSettingsModalOpen] = useState(false);
+  const [isGymIdentityModalOpen, setIsGymIdentityModalOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [quickFeedback, setQuickFeedback] = useState(null);
@@ -163,9 +170,11 @@ function App() {
   }
 
   return (
-    <div data-theme="office" className="bg-slate-950 text-slate-100 font-sans antialiased h-full min-h-screen flex flex-col select-none">
+    <div data-theme="office" className="app-shell">
+      <a href="#main-content" className="app-skip-link">Saltar al contenido</a>
+
       {/* HEADER */}
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+      <header className="app-header">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center font-black text-white shadow-lg shadow-indigo-600/30">
             <Dumbbell className="w-5 h-5" />
@@ -179,32 +188,58 @@ function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsBiometricCheckinModalOpen(true)}
+            aria-label="Registrar entrada por huella"
+            className="app-icon-button app-header-action"
+          >
+            <Fingerprint className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsBiometricSettingsModalOpen(true)}
+            aria-label="Configurar lector de huellas"
+            className="app-icon-button app-header-action app-header-action--desktop"
+          >
+            <Settings className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsGymIdentityModalOpen(true)}
+            aria-label="Editar identidad del gimnasio"
+            className="app-icon-button app-header-action"
+          >
+            <Building2 className="w-4 h-4" aria-hidden="true" />
+          </button>
           {isRemoteEnabled && (
             <button
+              type="button"
               onClick={signOut}
               aria-label="Cerrar sesión"
-              className="h-9 w-9 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-all"
+              className="app-icon-button app-header-action"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
           <button
+            type="button"
             onClick={() => setIsAddMemberModalOpen(true)}
-            className="h-9 px-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-2 text-xs font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+            className="app-primary-action h-9 px-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center gap-2 text-xs font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-4 h-4" aria-hidden="true" />
             <span>Inscribir</span>
           </button>
         </div>
       </header>
 
       {/* MAIN CONTENT */}
-      <main className="p-4 max-w-md mx-auto w-full flex-1 pb-28 space-y-4 overflow-y-auto">
+      <main id="main-content" className="app-main">
         {error && (
           <div className="bg-rose-950/40 border border-rose-500/20 text-rose-200 rounded-xl p-3 flex items-start justify-between gap-3 text-[10px] font-bold">
             <span>{error}</span>
-            <button onClick={clearError} className="text-rose-300 hover:text-white">
-              <X className="w-4 h-4" />
+            <button type="button" onClick={clearError} className="app-icon-button text-rose-300 hover:text-white" aria-label="Cerrar error">
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -247,23 +282,24 @@ function App() {
           </div>
         )}
 
-        <section className="space-y-2">
+        <section className="app-search space-y-2">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Buscar socio por nombre o CC..."
+              placeholder="Buscar socio por nombre o CC…"
               className="w-full h-11 pl-10 pr-10 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                className="app-icon-button app-search-clear absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
                 aria-label="Limpiar busqueda"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -315,37 +351,52 @@ function App() {
             cashFlow={cashFlow} 
           />
         )}
+        {activeTab === 'accounting' && (
+          <Accounting />
+        )}
       </main>
 
       {/* BOTTOM NAVIGATION */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800/80 px-6 py-2 flex justify-around items-center max-w-md mx-auto z-40 rounded-t-3xl shadow-2xl">
+      <nav className="app-nav">
         <button 
+          type="button"
           onClick={() => setActiveTab('dashboard')} 
-          className={`flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
         >
-          <CheckCircle className="w-5 h-5" />
+          <CheckCircle className="w-5 h-5" aria-hidden="true" />
           <span className="text-[8px] tracking-wider uppercase font-extrabold">Inicio</span>
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('members')} 
-          className={`flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'members' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'members' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
         >
-          <Users className="w-5 h-5" />
+          <Users className="w-5 h-5" aria-hidden="true" />
           <span className="text-[8px] tracking-wider uppercase font-extrabold">Socios</span>
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('store')} 
-          className={`flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'store' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'store' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
         >
-          <ShoppingBag className="w-5 h-5" />
+          <ShoppingBag className="w-5 h-5" aria-hidden="true" />
           <span className="text-[8px] tracking-wider uppercase font-extrabold">Tienda</span>
         </button>
         <button 
+          type="button"
           onClick={() => setActiveTab('payments')} 
-          className={`flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'payments' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'payments' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
         >
-          <CreditCard className="w-5 h-5" />
+          <CreditCard className="w-5 h-5" aria-hidden="true" />
           <span className="text-[8px] tracking-wider uppercase font-extrabold">Caja</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('accounting')}
+          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'accounting' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+        >
+          <BarChart3 className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[8px] tracking-wider uppercase font-extrabold">Contab.</span>
         </button>
       </nav>
 
@@ -361,6 +412,30 @@ function App() {
       {isAddMemberModalOpen && (
         <AddMemberModal 
           onClose={() => setIsAddMemberModalOpen(false)} 
+        />
+      )}
+
+      {isBiometricCheckinModalOpen && (
+        <BiometricCheckinModal
+          onCheckinFeedback={handleCheckinFeedback}
+          onOpenSettings={() => {
+            setIsBiometricCheckinModalOpen(false);
+            setIsBiometricSettingsModalOpen(true);
+          }}
+          onClose={() => setIsBiometricCheckinModalOpen(false)}
+        />
+      )}
+
+      {isBiometricSettingsModalOpen && (
+        <BiometricSettingsModal
+          onClose={() => setIsBiometricSettingsModalOpen(false)}
+        />
+      )}
+
+      {/* Tenant identity edits are presentation/contact-only. The modal never mutates slug, license or membership state. */}
+      {isGymIdentityModalOpen && (
+        <GymIdentityModal
+          onClose={() => setIsGymIdentityModalOpen(false)}
         />
       )}
 

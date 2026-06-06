@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { GymProvider } from '../context/GymContext';
+import { UiProvider } from '../context/UiContext';
 import Dashboard from './Dashboard';
 import Members from './Members';
 import BottomSheet from './BottomSheet';
@@ -32,7 +33,11 @@ function renderWithContext(ui, { members = [], products = [], checkins = [] } = 
   if (checkins.length)  mock.setItem('gym_checkins', JSON.stringify(checkins));
   vi.stubGlobal('localStorage', mock);
 
-  return render(<GymProvider>{ui}</GymProvider>);
+  return render(
+    <GymProvider>
+      <UiProvider>{ui}</UiProvider>
+    </GymProvider>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────

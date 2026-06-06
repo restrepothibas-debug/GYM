@@ -1,11 +1,13 @@
 import { useState, useContext } from 'react';
 import { Trash2, User } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
+import { useUi } from '../context/UiContext';
 import { formatCurrency, getMemberDebtBreakdown } from '../lib/accounting';
-import { getDaysRemaining } from '../lib/dateUtils';
+import { formatMembershipStatus, getDaysRemaining } from '../lib/dateUtils';
 
 function Members({ openBottomSheet }) {
   const { deleteMember, members } = useContext(GymContext);
+  const { confirm, notify } = useUi();
   const [filter, setFilter] = useState('all');
 
   // Balance display contract:
@@ -22,8 +24,32 @@ function Members({ openBottomSheet }) {
 
   const handleDelete = async (event, member) => {
     event.stopPropagation();
-    if (!window.confirm(`¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`)) return;
-    await deleteMember(member.id);
+    const confirmed = await confirm({
+      title: 'Eliminar usuario activo',
+      message: `¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`,
+      confirmLabel: 'Eliminar usuario',
+    });
+    if (!confirmed) return;
+
+    const removed = await deleteMember(member.id);
+    if (removed) {
+      notify({
+        title: 'Usuario eliminado',
+        message: `${member.name} ya no aparece en usuarios activos.`,
+        tone: 'success',
+      });
+    }
+  };
+
+  const openMemberDetails = (memberId) => {
+    openBottomSheet(memberId);
+  };
+
+  const handleRowKeyDown = (event, memberId) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openMemberDetails(memberId);
   };
 
   const filters = [
@@ -35,15 +61,16 @@ function Members({ openBottomSheet }) {
   ];
 
   return (
-    <div className="space-y-3 animate-fadeIn">
+    <div className="members-view space-y-3 animate-fadeIn">
       <div className="flex flex-col gap-2">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Base de Datos de Miembros</h3>
-        <div className="flex gap-1 overflow-x-auto pb-1">
+        <div className="members-filters flex gap-1 overflow-x-auto pb-1">
           {filters.map(f => (
             <button
               key={f.key}
+              type="button"
               onClick={() => setFilter(f.key)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-all ${filter === f.key ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+              className={`app-filter-chip px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-all ${filter === f.key ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
             >
               {f.label}
             </button>
@@ -51,28 +78,30 @@ function Members({ openBottomSheet }) {
         </div>
       </div>
 
-      <div className="space-y-2 max-h-[55vh] overflow-y-auto rounded-xl pr-1">
+      <div className="members-list space-y-2 max-h-[55vh] overflow-y-auto rounded-xl pr-1">
         {filteredMembers.length === 0 ? (
           <p className="text-[10px] text-slate-500 py-6 text-center">Ningún miembro coincide con este filtro.</p>
         ) : (
           filteredMembers.map(m => {
-            const daysLeft = getDaysRemaining(m.expiryDate);
-            const isExpired = daysLeft < 0;
-            const statusColor = isExpired ? 'text-rose-400' : daysLeft <= 5 ? 'text-amber-400' : 'text-emerald-400';
+            const membershipStatus = formatMembershipStatus(m.expiryDate);
+            const statusColor = membershipStatus.tone === 'danger' ? 'text-rose-400' : membershipStatus.tone === 'warning' ? 'text-amber-400' : 'text-emerald-400';
             const debtBreakdown = getMemberDebtBreakdown(m);
             const balanceColor = debtBreakdown.totalDebt > 0 ? 'text-rose-400' : m.balance > 0 ? 'text-emerald-400' : 'text-slate-400';
 
             return (
               <div
                 key={m.id}
-                onClick={() => openBottomSheet(m.id)}
-                className="p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
+                role="button"
+                tabIndex={0}
+                onClick={() => openMemberDetails(m.id)}
+                onKeyDown={(event) => handleRowKeyDown(event, m.id)}
+                className="member-row p-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-2xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
               >
-                <div className="flex items-center gap-3 max-w-[65%]">
+                <div className="member-row__identity flex items-center gap-3 max-w-[65%]">
                   <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-slate-400" />
+                    <User className="w-4 h-4 text-slate-400" aria-hidden="true" />
                   </div>
-                  <div className="truncate">
+                  <div className="min-w-0 truncate">
                     <h4 className="font-bold text-xs text-slate-200 truncate">{m.name}</h4>
                     <p className="text-[9px] text-slate-500">C.C. {m.doc}</p>
                   </div>
@@ -80,8 +109,9 @@ function Members({ openBottomSheet }) {
                 <div className="flex items-center gap-2">
                   <div className="text-right">
                     <p className={`text-[10px] font-black ${statusColor}`}>
-                      {isExpired ? 'Vencido' : `${daysLeft} días`}
+                      {membershipStatus.label}
                     </p>
+                    <p className="text-[8px] text-slate-500 font-semibold mt-0.5">Vence {m.expiryDate}</p>
                     <p className={`text-[9px] font-semibold ${balanceColor} mt-0.5`}>
                       {debtBreakdown.totalDebt > 0
                         ? `Debe ${formatCurrency(debtBreakdown.totalDebt)}`
@@ -94,9 +124,9 @@ function Members({ openBottomSheet }) {
                     type="button"
                     onClick={(event) => handleDelete(event, m)}
                     aria-label={`Eliminar usuario ${m.name}`}
-                    className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all"
+                    className="app-icon-button app-icon-button--danger w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </div>

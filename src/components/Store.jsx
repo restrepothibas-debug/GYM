@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect, useId, useRef } from 'react';
 import { Package, Plus, X, ShoppingCart } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
 import AddProductModal from './AddProductModal';
@@ -10,6 +10,28 @@ function Store() {
   const [paymentMethod, setPaymentMethod] = useState('credito');
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [selling, setSelling] = useState(false);
+  const sellModalTitleId = useId();
+  const memberSelectId = useId();
+  const paymentMethodId = useId();
+  const memberSelectRef = useRef(null);
+
+  useEffect(() => {
+    if (!sellModal) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setSellModal(null);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // The sale modal is an operational desktop flow; focus the first decision
+    // control only when there is enough viewport to avoid mobile keyboard churn.
+    if (window.matchMedia?.('(min-width: 48rem)').matches) {
+      memberSelectRef.current?.focus();
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sellModal]);
 
   const handleSell = async () => {
     if (!selectedMember) return;
@@ -24,29 +46,30 @@ function Store() {
   };
 
   return (
-    <div className="space-y-3 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div className="store-view space-y-3 animate-fadeIn">
+      <div className="store-toolbar flex items-center justify-between">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Cafetería & Suplementos</h3>
         <button
+          type="button"
           onClick={() => setAddProductOpen(true)}
-          className="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+          className="app-toolbar-button px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
         >
-          <Plus className="w-3 h-3 text-indigo-400" /> Nuevo Stock
+          <Plus className="w-3 h-3 text-indigo-400" aria-hidden="true" /> Nuevo Stock
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 max-h-[58vh] overflow-y-auto pr-1">
+      <div className="store-grid grid grid-cols-2 gap-2.5 max-h-[58vh] overflow-y-auto pr-1">
         {products.length === 0 ? (
           <p className="col-span-2 text-[10px] text-slate-500 py-6 text-center">No hay productos. Agrega el primero.</p>
         ) : (
           products.map(p => {
             const isLowStock = p.stock <= 5;
             return (
-              <div key={p.id} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-3.5 flex flex-col justify-between space-y-3.5">
+              <div key={p.id} className="store-card bg-slate-900 border border-slate-800/80 rounded-2xl p-3.5 flex flex-col justify-between space-y-3.5">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                      <Package className="w-3.5 h-3.5" />
+                      <Package className="w-3.5 h-3.5" aria-hidden="true" />
                     </span>
                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isLowStock ? 'bg-rose-500/10 text-rose-400' : 'bg-slate-950 text-slate-400'}`}>
                       Stock: {p.stock}
@@ -56,9 +79,10 @@ function Store() {
                   <span className="font-extrabold text-xs text-indigo-400 mt-1 block">${p.price.toLocaleString()}</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => { setSellModal(p); setSelectedMember(''); setPaymentMethod('credito'); }}
                   disabled={p.stock === 0}
-                  className="w-full h-8 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="store-card-action w-full h-8 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {p.stock === 0 ? 'Sin Stock' : 'Asignar / Vender'}
                 </button>
@@ -70,19 +94,34 @@ function Store() {
 
       {/* MODAL VENTA */}
       {sellModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+        <div className="app-modal-overlay">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={sellModalTitleId}
+            className="app-modal-card"
+          >
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShoppingCart className="text-indigo-400 w-4 h-4" />
-                <h3 className="font-extrabold text-xs text-slate-100">Asignar: {sellModal.name}</h3>
+                <ShoppingCart className="text-indigo-400 w-4 h-4" aria-hidden="true" />
+                <h3 id={sellModalTitleId} className="font-extrabold text-xs text-slate-100">Asignar: {sellModal.name}</h3>
               </div>
-              <button onClick={() => setSellModal(null)} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+              <button
+                type="button"
+                onClick={() => setSellModal(null)}
+                className="app-icon-button p-1 text-slate-400 hover:text-white"
+                aria-label="Cerrar venta de producto"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
             </div>
             <div className="p-4 space-y-3.5">
               <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 1: Selecciona un Socio *</label>
+                <label htmlFor={memberSelectId} className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 1: Selecciona un Socio *</label>
                 <select
+                  id={memberSelectId}
+                  ref={memberSelectRef}
+                  name="memberId"
                   value={selectedMember}
                   onChange={e => setSelectedMember(e.target.value)}
                   className="w-full h-10 px-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
@@ -92,8 +131,10 @@ function Store() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 2: Tipo de Registro *</label>
+                <label htmlFor={paymentMethodId} className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 2: Tipo de Registro *</label>
                 <select
+                  id={paymentMethodId}
+                  name="paymentMethod"
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value)}
                   className="w-full h-10 px-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
@@ -104,12 +145,13 @@ function Store() {
                 </select>
               </div>
               <button
+                type="button"
                 onClick={handleSell}
                 disabled={!selectedMember || selling}
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg"
+                className="app-primary-action w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg"
               >
                 {selling
-                  ? 'Procesando...'
+                  ? 'Procesando…'
                   : `${paymentMethod === 'credito' ? 'Asignar a Credito' : 'Registrar Pago'} — $${sellModal.price.toLocaleString()}`}
               </button>
             </div>

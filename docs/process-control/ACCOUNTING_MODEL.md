@@ -8,6 +8,8 @@ The application now records operational money events in a double-entry ledger.
 - `ledger_transactions`: accounting transaction header.
 - `ledger_entries`: debit/credit lines.
 - `member_purchases`: product assignment/sale history. The legacy column `total_paid` remains for compatibility; new logic should prefer `sale_total`, `amount_paid` and `payment_status`.
+- `membership_plans`: per-tenant plan catalog used by enrollment and renewal.
+- `member_membership_events`: membership audit trail for enrollment, renewal and manual day adjustments.
 
 All ledger tables include `tenant_id`, have RLS enabled and expose read access only to tenant members.
 
@@ -78,6 +80,27 @@ Required rules:
 - Immediate cash/card payment records `member_purchases`, decreases stock, posts ledger revenue and records cash flow.
 - The legacy payment methods `asignado` and `monedero` must be treated as `credito` for new logic.
 - Total debt is membership debt plus unpaid product credit debt.
+
+## Payment Allocation Contract
+
+Use `record_member_payment_allocated` for member payments that may target more
+than membership debt.
+
+- `p_target = membership`: applies payment to negative `members.balance`; excess becomes customer credit.
+- `p_target = products`: applies payment to unpaid `member_purchases` first; only excess can affect membership debt or customer credit.
+- `p_target = auto`: applies membership debt first, then product credit debt, then customer credit.
+- Product credit payments update `member_purchases.amount_paid` and `payment_status`.
+- Product credit payments must not decrease `members.balance`; `members.balance` remains the membership receivable/customer-credit contract.
+- `record_payment` is a compatibility wrapper for membership-only payments.
+
+## Membership Plan Contract
+
+Plan names, duration and prices belong to `membership_plans` per tenant.
+
+- Do not duplicate plan presets in React components.
+- Do not constrain `members.plan` to a hardcoded enum. It must reference the tenant plan catalog.
+- Enrollment and renewal RPCs must resolve price/duration from the tenant plan catalog.
+- Manual day changes must call `adjust_member_membership_days` so `member_membership_events` records the reason and before/after dates.
 
 ## Member Deletion Contract
 

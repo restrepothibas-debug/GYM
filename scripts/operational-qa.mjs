@@ -200,6 +200,70 @@ async function run() {
   const accounts = await selectRows(accessToken, 'ledger_accounts', `select=system_key&tenant_id=eq.${tenantId}`);
   assertStep('ledger.default_accounts', accounts.length >= 8, { count: accounts.length });
 
+  const [customPlan] = await insertRow(accessToken, 'membership_plans', {
+    tenant_id: tenantId,
+    plan_key: `qa_custom_${runId}`,
+    name: `QA Custom ${runId}`,
+    duration_days: 11,
+    price: 12345,
+    sort_order: 900,
+  }, 'id,plan_key,duration_days,price');
+  const [renewalCustomPlan] = await insertRow(accessToken, 'membership_plans', {
+    tenant_id: tenantId,
+    plan_key: `qa_renew_${runId}`,
+    name: `QA Renewal ${runId}`,
+    duration_days: 13,
+    price: 23456,
+    sort_order: 901,
+  }, 'id,plan_key,duration_days,price');
+  assertStep('plans.custom_catalog_insert', Boolean(customPlan?.id && renewalCustomPlan?.id), {
+    customPlan: customPlan?.plan_key,
+    renewalCustomPlan: renewalCustomPlan?.plan_key,
+  });
+
+  const customPlanMemberId = await rpc(accessToken, 'create_member', {
+    p_tenant_id: tenantId,
+    p_name: `Socio Plan Custom QA ${runId}`,
+    p_doc: `PLAN-${runId}`,
+    p_phone: '3000000002',
+    p_plan: customPlan.plan_key,
+    p_expiry_date: new Date(Date.now() + 11 * 86400000).toISOString().slice(0, 10),
+    p_plan_price: 0,
+    p_initial_balance: 0,
+  });
+  const [customPlanMember] = await selectRows(
+    accessToken,
+    'members',
+    `select=plan,balance&tenant_id=eq.${tenantId}&id=eq.${customPlanMemberId}`
+  );
+  assertStep('plans.custom_plan_enrollment', Boolean(
+    customPlanMemberId &&
+    customPlanMember?.plan === customPlan.plan_key &&
+    Number(customPlanMember?.balance) === -12345
+  ), {
+    customPlanMemberId,
+    customPlanMember,
+  });
+
+  await rpc(accessToken, 'renew_member_plan', {
+    p_tenant_id: tenantId,
+    p_member_id: customPlanMemberId,
+    p_plan: renewalCustomPlan.plan_key,
+    p_duration_days: 0,
+    p_price: 0,
+  });
+  const [renewedCustomPlanMember] = await selectRows(
+    accessToken,
+    'members',
+    `select=plan,balance&tenant_id=eq.${tenantId}&id=eq.${customPlanMemberId}`
+  );
+  assertStep('plans.custom_plan_renewal', Boolean(
+    renewedCustomPlanMember?.plan === renewalCustomPlan.plan_key &&
+    Number(renewedCustomPlanMember?.balance) === -35801
+  ), {
+    renewedCustomPlanMember,
+  });
+
   const [product] = await insertRow(accessToken, 'products', {
     tenant_id: tenantId,
     name: `QA Agua ${runId}`,
@@ -280,7 +344,7 @@ async function run() {
   const productPurchases = await selectRows(
     accessToken,
     'member_purchases',
-    `select=sale_total,amount_paid,payment_status,payment_method&tenant_id=eq.${tenantId}&member_id=eq.${memberId}&product_id=eq.${product.id}&order=purchased_at.asc`
+    `select=id,sale_total,amount_paid,payment_status,payment_method&tenant_id=eq.${tenantId}&member_id=eq.${memberId}&product_id=eq.${product.id}&order=purchased_at.asc`
   );
   const creditPurchase = productPurchases.find(purchase => purchase.payment_method === 'credito');
   assertStep('products.credit_does_not_touch_member_balance', Boolean(
@@ -292,6 +356,35 @@ async function run() {
     purchases: productPurchases.length,
     creditPurchase,
     memberBalance: Number(member?.balance),
+  });
+
+  const productPaymentAllocation = await rpc(accessToken, 'record_member_payment_allocated', {
+    p_tenant_id: tenantId,
+    p_member_id: memberId,
+    p_amount: 4000,
+    p_target: 'products',
+    p_description: 'Pago QA producto credito',
+  });
+  const [paidCreditPurchase] = await selectRows(
+    accessToken,
+    'member_purchases',
+    `select=amount_paid,payment_status&tenant_id=eq.${tenantId}&id=eq.${creditPurchase.id}`
+  );
+  const [memberAfterProductPayment] = await selectRows(
+    accessToken,
+    'members',
+    `select=balance&tenant_id=eq.${tenantId}&id=eq.${memberId}`
+  );
+  assertStep('payments.product_credit_allocation_rpc', Boolean(
+    Number(productPaymentAllocation?.product_applied) === 4000 &&
+    Number(productPaymentAllocation?.membership_applied) === 0 &&
+    Number(paidCreditPurchase?.amount_paid) === 4000 &&
+    paidCreditPurchase?.payment_status === 'paid' &&
+    Number(memberAfterProductPayment?.balance) === -30000
+  ), {
+    allocation: productPaymentAllocation,
+    paidCreditPurchase,
+    memberBalance: Number(memberAfterProductPayment?.balance),
   });
 
   const fullPaymentMemberId = await rpc(accessToken, 'create_member', {

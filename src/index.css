@@ -1,4 +1,6 @@
-@import "tailwindcss" source(".");
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
 @import "./styles/design-tokens.css";
 @import "./styles/office-theme.css";
 

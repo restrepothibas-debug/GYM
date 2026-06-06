@@ -1,3 +1,11 @@
+/*
+ * Office UI theme
+ * ---------------
+ * This file centralizes desktop/tablet layout, control sizing, color mapping,
+ * modal behavior and toast presentation for the app. Component files should
+ * add semantic class hooks only; visual rules belong here.
+ */
+
 [data-theme="office"] {
   min-height: 100%;
   background:
@@ -59,10 +67,12 @@
 [data-theme="office"] .bg-indigo-600,
 [data-theme="office"] .bg-indigo-500 {
   background-color: var(--app-primary) !important;
+  color: var(--app-on-primary) !important;
 }
 
 [data-theme="office"] .hover\:bg-indigo-500:hover {
   background-color: var(--app-primary-hover) !important;
+  color: var(--app-on-primary) !important;
 }
 
 [data-theme="office"] .text-indigo-300,
@@ -91,6 +101,12 @@
   background-color: var(--app-success-soft) !important;
 }
 
+[data-theme="office"] .bg-emerald-600,
+[data-theme="office"] .bg-emerald-500,
+[data-theme="office"] .hover\:bg-emerald-500:hover {
+  color: var(--app-on-primary) !important;
+}
+
 [data-theme="office"] .text-emerald-300,
 [data-theme="office"] .text-emerald-400 {
   color: var(--app-success) !important;
@@ -107,6 +123,11 @@
 [data-theme="office"] .bg-rose-950\/30,
 [data-theme="office"] .bg-rose-950\/40 {
   background-color: var(--app-danger-soft) !important;
+}
+
+[data-theme="office"] .bg-rose-500,
+[data-theme="office"] .hover\:bg-rose-500:hover {
+  color: var(--app-on-primary) !important;
 }
 
 [data-theme="office"] .text-rose-200,
@@ -176,6 +197,7 @@
 [data-theme="office"] .bg-gradient-to-r {
   background-image: none !important;
   background-color: var(--app-primary) !important;
+  color: var(--app-on-primary) !important;
 }
 
 [data-theme="office"] .bg-clip-text {
@@ -190,4 +212,1918 @@
 
 [data-theme="office"] button {
   letter-spacing: 0;
+}
+
+[data-theme="office"] button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/*
+ * Control system
+ * --------------
+ * These classes intentionally override compact mobile Tailwind utilities on
+ * tablet/desktop without using inline styles. They keep all actionable
+ * controls legible and large enough for pointer and touch interaction.
+ */
+[data-theme="office"] .app-control,
+[data-theme="office"] .app-primary-action,
+[data-theme="office"] .app-toolbar-button,
+[data-theme="office"] .app-filter-chip,
+[data-theme="office"] .dashboard-action-button,
+[data-theme="office"] .store-card-action,
+[data-theme="office"] .app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: var(--app-control-compact-block-size);
+  touch-action: manipulation;
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+[data-theme="office"] .app-primary-action {
+  min-block-size: var(--app-control-block-size);
+  color: var(--app-on-primary) !important;
+  background-color: var(--app-primary) !important;
+}
+
+[data-theme="office"] .app-primary-action:hover {
+  background-color: var(--app-primary-hover) !important;
+}
+
+[data-theme="office"] .app-toolbar-button {
+  min-block-size: var(--app-control-compact-block-size);
+  padding-inline: 0.875rem !important;
+  font-size: 0.6875rem !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .app-toolbar-button--danger:hover {
+  color: var(--app-on-primary) !important;
+  background-color: var(--app-danger) !important;
+}
+
+[data-theme="office"] .app-filter-chip {
+  min-block-size: var(--app-filter-chip-block-size);
+  padding-inline: 0.875rem !important;
+  font-size: 0.6875rem !important;
+  line-height: 1;
+}
+
+[data-theme="office"] .app-icon-button {
+  display: inline-grid !important;
+  place-items: center;
+  inline-size: var(--app-icon-button-size) !important;
+  block-size: var(--app-icon-button-size) !important;
+  min-inline-size: var(--app-icon-button-size);
+  min-block-size: var(--app-icon-button-size);
+  padding: 0 !important;
+  border-radius: var(--radius-md) !important;
+  touch-action: manipulation;
+  transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+[data-theme="office"] .app-icon-button--danger:hover {
+  color: var(--app-on-primary) !important;
+  background-color: var(--app-danger) !important;
+}
+
+[data-theme="office"] .dashboard-action-button {
+  block-size: auto !important;
+  inline-size: auto !important;
+  min-inline-size: clamp(4.25rem, 7vw, 5.5rem);
+  min-block-size: var(--app-control-compact-block-size);
+  padding-inline: 0.75rem !important;
+  font-size: 0.6875rem !important;
+  line-height: 1;
+}
+
+[data-theme="office"] .dashboard-action-button--primary {
+  color: var(--app-on-primary) !important;
+  background-color: var(--app-primary) !important;
+}
+
+[data-theme="office"] .dashboard-action-button--primary:hover {
+  background-color: var(--app-primary-hover) !important;
+}
+
+[data-theme="office"] .dashboard-action-button--checked {
+  color: var(--app-success) !important;
+}
+
+[data-theme="office"] .store-card-action {
+  block-size: auto !important;
+  min-block-size: var(--app-control-compact-block-size);
+  padding-inline: 0.75rem;
+}
+
+/*
+ * App surfaces
+ * ------------
+ * These rules harden repeated cards and rows against long names, large money
+ * values and mixed tablet/desktop column widths.
+ */
+[data-theme="office"] .dashboard-view,
+[data-theme="office"] .members-view,
+[data-theme="office"] .store-view,
+[data-theme="office"] .payments-view,
+[data-theme="office"] .accounting-view {
+  inline-size: 100%;
+}
+
+[data-theme="office"] .dashboard-view > *,
+[data-theme="office"] .payments-view > *,
+[data-theme="office"] .accounting-view > *,
+[data-theme="office"] .store-card,
+[data-theme="office"] .member-row,
+[data-theme="office"] .payment-row {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .dashboard-express-card {
+  min-block-size: clamp(7rem, 9vw, 8.5rem);
+}
+
+[data-theme="office"] .dashboard-express-card,
+[data-theme="office"] .dashboard-metric-card,
+[data-theme="office"] .dashboard-recent-row {
+  transition-property: background-color, border-color, box-shadow, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+[data-theme="office"] .dashboard-metric-card {
+  min-block-size: 5.75rem;
+}
+
+[data-theme="office"] .dashboard-metric-label,
+[data-theme="office"] .dashboard-section-title {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+[data-theme="office"] .dashboard-recent-row {
+  gap: 0.75rem;
+}
+
+[data-theme="office"] .dashboard-recent-member,
+[data-theme="office"] .member-row__identity,
+[data-theme="office"] .payment-row__identity {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .members-filters {
+  scrollbar-width: thin;
+}
+
+[data-theme="office"].app-shell {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  block-size: 100%;
+  min-inline-size: 0;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="office"] .app-skip-link {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-150%);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  color: var(--app-on-primary);
+  background-color: var(--app-primary);
+  box-shadow: var(--app-shadow-md);
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: transform 160ms ease;
+}
+
+[data-theme="office"] .app-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+[data-theme="office"] .app-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 4rem;
+  padding-inline: var(--app-shell-padding) !important;
+  padding-block: 0.75rem;
+  border-block-end: 0.0625rem solid var(--app-border);
+  background-color: color-mix(in srgb, var(--app-surface) 94%, transparent) !important;
+}
+
+[data-theme="office"] .app-header > :first-child {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-header > :last-child {
+  flex: 0 0 auto;
+}
+
+[data-theme="office"] .app-header-action {
+  color: var(--app-text-muted);
+  background-color: var(--app-surface-subtle);
+  border: 0.0625rem solid var(--app-border);
+}
+
+[data-theme="office"] .app-header-action:hover {
+  color: var(--app-text);
+  background-color: var(--app-surface-muted);
+}
+
+[data-theme="office"] .app-header-action--desktop {
+  display: none !important;
+}
+
+[data-theme="office"] .app-main {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  flex: 1 1 auto;
+  max-width: var(--app-content-max-mobile) !important;
+  max-inline-size: var(--app-content-max-mobile);
+  margin-inline: auto;
+  padding: var(--app-shell-padding) !important;
+  padding-block-end: calc(6.5rem + var(--app-safe-bottom)) !important;
+  overflow-y: auto;
+}
+
+[data-theme="office"] .app-main > :not([hidden]) ~ :not([hidden]) {
+  margin-block-start: 1rem;
+}
+
+[data-theme="office"] .app-main > * {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-nav {
+  /* Mobile: fixed bottom bar (was Tailwind fixed bottom-0 left-0 right-0) */
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  box-sizing: border-box;
+  max-width: var(--app-content-max-mobile) !important;
+  max-inline-size: var(--app-content-max-mobile);
+  margin-inline: auto;
+  padding: 0.5rem 1.5rem calc(0.5rem + var(--app-safe-bottom)) !important;
+  border-block-start: 0.0625rem solid var(--app-border);
+  border-start-start-radius: var(--radius-lg);
+  border-start-end-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--app-surface) 96%, transparent) !important;
+  box-shadow: var(--app-shadow-lg);
+}
+
+[data-theme="office"] .app-nav__item,
+[data-theme="office"] .app-button,
+[data-theme="office"] .app-toast__close {
+  touch-action: manipulation;
+}
+
+[data-theme="office"] .app-nav__item {
+  box-sizing: border-box;
+  min-inline-size: clamp(2.75rem, 16vw, 3.5rem);
+  min-block-size: 3rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+[data-theme="office"] .app-nav__item span {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="office"] button:focus-visible,
+[data-theme="office"] a:focus-visible {
+  outline: 0.125rem solid var(--app-primary);
+  outline-offset: 0.1875rem;
+}
+
+/*
+ * Modal and drawer surfaces
+ * -------------------------
+ * Overlay geometry lives here so modal components do not carry fixed/inset/z
+ * utilities that can conflict with responsive shell placement.
+ */
+[data-theme="office"].app-modal-overlay,
+[data-theme="office"] .app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--app-shell-padding);
+  background-color: rgb(15 23 42 / 0.62) !important;
+  backdrop-filter: blur(0.75rem);
+  overscroll-behavior: contain;
+}
+
+[data-theme="office"] .app-modal-card {
+  inline-size: min(100%, 28rem);
+  max-width: min(100%, 28rem) !important;
+  max-inline-size: min(100%, 28rem);
+  overflow: hidden;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-lg) !important;
+  background-color: var(--app-elevated) !important;
+  box-shadow: var(--app-shadow-lg);
+}
+
+/*
+ * Gym identity modal
+ * ------------------
+ * The identity editor is wider than a confirmation dialog because it owns a
+ * multi-field tenant profile. Keep all responsive sizing here so future agents
+ * do not patch modal geometry with inline styles or component-local CSS.
+ */
+[data-theme="office"] .app-identity-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  inline-size: min(100%, 46rem);
+  max-width: min(100%, 46rem) !important;
+  max-inline-size: min(100%, 46rem);
+  max-block-size: min(92dvh, 52rem);
+}
+
+[data-theme="office"] .app-identity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(0.875rem, 2.5vw, 1.125rem);
+  border-block-end: 0.0625rem solid var(--app-border);
+}
+
+[data-theme="office"] .app-identity-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-identity-title h2 {
+  color: var(--app-text);
+  font-size: clamp(0.95rem, 2vw, 1.075rem);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+[data-theme="office"] .app-identity-title p {
+  margin-block-start: 0.1875rem;
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .app-identity-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .app-identity-form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+[data-theme="office"] .app-identity-scroll {
+  display: grid;
+  gap: 0.75rem;
+  min-block-size: 0;
+  padding: clamp(0.875rem, 2.5vw, 1.125rem);
+  overflow-y: auto;
+}
+
+[data-theme="office"] .app-identity-error {
+  padding: 0.75rem;
+  border: 0.0625rem solid color-mix(in srgb, var(--app-warning) 28%, white);
+  border-radius: var(--radius-md);
+  color: var(--app-warning);
+  background-color: var(--app-warning-soft);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .app-identity-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.625rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .app-identity-logo {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .app-identity-logo--placeholder {
+  border: 0.0625rem dashed color-mix(in srgb, var(--app-primary) 34%, white);
+}
+
+[data-theme="office"] .app-identity-summary {
+  display: grid;
+  gap: 0.1875rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-identity-summary strong,
+[data-theme="office"] .app-identity-summary span,
+[data-theme="office"] .app-identity-summary small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .app-identity-summary strong {
+  color: var(--app-text);
+  font-size: 0.875rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .app-identity-summary span,
+[data-theme="office"] .app-identity-summary small {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+[data-theme="office"] .app-identity-grid {
+  display: grid;
+  gap: 0.625rem 0.875rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-identity-field {
+  display: grid;
+  gap: 0.375rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-identity-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--app-text-muted);
+  font-size: 0.625rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+[data-theme="office"] .app-identity-input,
+[data-theme="office"] .app-identity-textarea {
+  inline-size: 100%;
+  min-inline-size: 0;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+[data-theme="office"] .app-identity-input {
+  min-block-size: var(--app-control-compact-block-size);
+  padding-inline: 0.75rem;
+}
+
+[data-theme="office"] .app-identity-textarea {
+  min-block-size: 4rem;
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+[data-theme="office"] .app-identity-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-identity-color-input {
+  inline-size: 3rem;
+  min-inline-size: 3rem;
+  block-size: var(--app-control-compact-block-size);
+  padding: 0.25rem !important;
+  border-radius: var(--radius-md);
+}
+
+[data-theme="office"] .app-identity-clear-color {
+  min-inline-size: 6rem;
+}
+
+[data-theme="office"] .app-identity-actions {
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.75rem clamp(0.875rem, 2.5vw, 1.125rem);
+  border-block-start: 0.0625rem solid var(--app-border);
+  background-color: var(--app-elevated);
+}
+
+[data-theme="office"] .app-identity-save {
+  min-inline-size: min(100%, 12rem);
+  padding-inline: 1rem !important;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+/*
+ * Tenant plan catalog
+ * -------------------
+ * Membership plans are operational tenant configuration. Keep card, editor and
+ * action layout here so enrollment/renewal components can consume the catalog
+ * without carrying visual rules or duplicating plan presets.
+ */
+[data-theme="office"] .app-plan-config {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .app-plan-config__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.875rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-plan-config__header h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .app-plan-config__header p,
+[data-theme="office"] .app-plan-config__role {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+[data-theme="office"] .app-plan-config__role {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--app-warning-soft);
+  color: var(--app-warning);
+}
+
+[data-theme="office"] .app-plan-list {
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-plan-card {
+  display: grid;
+  gap: 0.625rem;
+  min-inline-size: 0;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+}
+
+[data-theme="office"] .app-plan-card--inactive {
+  opacity: 0.68;
+}
+
+[data-theme="office"] .app-plan-card__main,
+[data-theme="office"] .app-plan-card__price {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-plan-card__main strong,
+[data-theme="office"] .app-plan-card__price strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.75rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .app-plan-card__main span,
+[data-theme="office"] .app-plan-card__price span {
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: 0.625rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .app-plan-card__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-plan-card__actions .app-button {
+  min-inline-size: 0;
+  padding-inline: 0.625rem;
+  font-size: 0.6875rem;
+}
+
+[data-theme="office"] .app-plan-editor {
+  display: grid;
+  gap: 0.625rem;
+  min-inline-size: 0;
+  padding-block-start: 0.125rem;
+}
+
+[data-theme="office"] .app-plan-editor__active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: var(--app-control-compact-block-size);
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .app-plan-editor__active input {
+  inline-size: 1rem;
+  block-size: 1rem;
+  box-shadow: none;
+}
+
+[data-theme="office"] .app-plan-editor__actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+[data-theme="office"] .app-plan-editor__save {
+  min-block-size: var(--app-control-block-size);
+  padding-inline: 1rem !important;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+/*
+ * Accounting dashboard
+ * --------------------
+ * The accounting screen reads normalized ledger entries from GymContext. These
+ * styles keep totals, receivables and recent transactions scannable on tablet
+ * and desktop without component-local CSS.
+ */
+[data-theme="office"] .accounting-view {
+  display: grid;
+  gap: var(--app-shell-gap);
+}
+
+[data-theme="office"] .accounting-header,
+[data-theme="office"] .accounting-ledger {
+  min-inline-size: 0;
+  padding: clamp(0.875rem, 2vw, 1.125rem);
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  box-shadow: var(--app-shadow-sm);
+}
+
+[data-theme="office"] .accounting-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+[data-theme="office"] .accounting-header h3 {
+  color: var(--app-text);
+  font-size: clamp(0.95rem, 1.8vw, 1.125rem);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+[data-theme="office"] .accounting-header p {
+  margin-block-start: 0.1875rem;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .accounting-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: 0 0 auto;
+  min-block-size: 1.875rem;
+  padding-inline: 0.625rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .accounting-balance--ok {
+  color: var(--app-success);
+  background-color: var(--app-success-soft);
+}
+
+[data-theme="office"] .accounting-balance--warn {
+  color: var(--app-danger);
+  background-color: var(--app-danger-soft);
+}
+
+[data-theme="office"] .accounting-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .accounting-metric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.375rem 0.625rem;
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  box-shadow: var(--app-shadow-sm);
+}
+
+[data-theme="office"] .accounting-metric__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  grid-row: span 2;
+  border-radius: var(--radius-md);
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .accounting-metric--expense .accounting-metric__icon {
+  color: var(--app-danger);
+  background-color: var(--app-danger-soft);
+}
+
+[data-theme="office"] .accounting-metric--cash .accounting-metric__icon,
+[data-theme="office"] .accounting-metric--revenue .accounting-metric__icon,
+[data-theme="office"] .accounting-metric--product .accounting-metric__icon {
+  color: var(--app-success);
+  background-color: var(--app-success-soft);
+}
+
+[data-theme="office"] .accounting-metric--receivable .accounting-metric__icon,
+[data-theme="office"] .accounting-metric--credit .accounting-metric__icon,
+[data-theme="office"] .accounting-metric--card .accounting-metric__icon {
+  color: var(--app-warning);
+  background-color: var(--app-warning-soft);
+}
+
+[data-theme="office"] .accounting-metric__label {
+  align-self: end;
+  overflow: hidden;
+  color: var(--app-text-muted);
+  font-size: 0.625rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .accounting-metric__value {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: clamp(0.875rem, 1.8vw, 1.05rem);
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .accounting-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 0.75rem;
+}
+
+[data-theme="office"] .accounting-section-title h4 {
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .accounting-section-title span {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+
+[data-theme="office"] .accounting-ledger-list {
+  display: grid;
+  gap: 0.5rem;
+  max-block-size: min(58dvh, 36rem);
+  overflow-y: auto;
+}
+
+[data-theme="office"] .accounting-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.75rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .accounting-ledger-row__main,
+[data-theme="office"] .accounting-ledger-row__amounts {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .accounting-ledger-row__main strong,
+[data-theme="office"] .accounting-ledger-row__main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .accounting-ledger-row__main strong {
+  color: var(--app-text);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .accounting-ledger-row__main span {
+  color: var(--app-text-muted);
+  font-size: 0.625rem;
+  font-weight: 750;
+}
+
+[data-theme="office"] .accounting-ledger-row__amounts {
+  justify-items: end;
+}
+
+[data-theme="office"] .accounting-ledger-row__amounts strong {
+  color: var(--app-text);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+[data-theme="office"] .accounting-ledger-row__tag {
+  padding: 0.1875rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+  font-size: 0.5625rem;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+[data-theme="office"] .accounting-empty {
+  padding: 0.875rem;
+  border: 0.0625rem dashed var(--app-border);
+  border-radius: var(--radius-md);
+  color: var(--app-text-muted);
+  background-color: var(--app-surface-subtle);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/*
+ * Biometric workstation surfaces
+ * ------------------------------
+ * Fingerprint readers are workstation hardware, so React components must only
+ * render state and call the adapter contract. Device layout and action sizing
+ * stay in this file to avoid hardware-specific CSS leaking into components.
+ */
+[data-theme="office"] .app-biometric-modal {
+  inline-size: min(100%, 36rem);
+  max-width: min(100%, 36rem) !important;
+  max-inline-size: min(100%, 36rem);
+}
+
+[data-theme="office"] .app-biometric-header,
+[data-theme="office"] .app-biometric-body {
+  padding: clamp(1rem, 3vw, 1.25rem);
+}
+
+[data-theme="office"] .app-biometric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-block-end: 0.0625rem solid var(--app-border);
+}
+
+[data-theme="office"] .app-biometric-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-biometric-title h2 {
+  color: var(--app-text);
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+[data-theme="office"] .app-biometric-title p {
+  margin-block-start: 0.1875rem;
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .app-biometric-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md);
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .app-biometric-body {
+  display: grid;
+  gap: 1rem;
+}
+
+[data-theme="office"] .app-biometric-status,
+[data-theme="office"] .app-biometric-match {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .app-biometric-status svg {
+  color: var(--app-primary);
+  flex: 0 0 auto;
+}
+
+[data-theme="office"] .app-biometric-status div,
+[data-theme="office"] .app-biometric-match {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-biometric-status strong,
+[data-theme="office"] .app-biometric-match strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .app-biometric-status span,
+[data-theme="office"] .app-biometric-match span {
+  display: block;
+  margin-block-start: 0.1875rem;
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+[data-theme="office"] .app-biometric-provider-list {
+  display: grid;
+  gap: 0.625rem;
+}
+
+[data-theme="office"] .app-biometric-provider {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  color: var(--app-text);
+  background-color: var(--app-elevated);
+  text-align: left;
+}
+
+[data-theme="office"] .app-biometric-provider--selected {
+  border-color: color-mix(in srgb, var(--app-primary) 46%, white);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .app-biometric-provider__check {
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  color: var(--app-primary);
+}
+
+[data-theme="office"] .app-biometric-provider__content {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-biometric-provider__content strong,
+[data-theme="office"] .app-biometric-provider__content span,
+[data-theme="office"] .app-biometric-provider__content small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .app-biometric-provider__content strong {
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .app-biometric-provider__content span,
+[data-theme="office"] .app-biometric-provider__content small {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+[data-theme="office"] .app-biometric-test {
+  justify-self: end;
+}
+
+[data-theme="office"] .app-biometric-scan {
+  display: grid;
+  place-items: center;
+  inline-size: 6rem;
+  block-size: 6rem;
+  margin-inline: auto;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: 50%;
+  color: var(--app-primary);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .app-biometric-scan--matched {
+  color: var(--app-success);
+  background-color: var(--app-success-soft);
+}
+
+[data-theme="office"] .app-biometric-scan--error {
+  color: var(--app-danger);
+  background-color: var(--app-danger-soft);
+}
+
+[data-theme="office"] .app-biometric-error {
+  padding: 0.75rem;
+  border: 0.0625rem solid color-mix(in srgb, var(--app-warning) 28%, white);
+  border-radius: var(--radius-md);
+  color: var(--app-warning);
+  background-color: var(--app-warning-soft);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .app-biometric-actions {
+  display: grid;
+  gap: 0.625rem;
+}
+
+[data-theme="office"] .app-biometric-submit {
+  min-block-size: var(--app-control-block-size);
+  padding-inline: 1rem !important;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 850;
+}
+
+[data-theme="office"] .member-biometric-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .member-biometric-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+[data-theme="office"] .member-biometric-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--app-primary);
+  font-size: 0.6875rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+[data-theme="office"] .member-biometric-card__status {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+
+[data-theme="office"] .member-biometric-card__status--active {
+  color: var(--app-success);
+}
+
+[data-theme="office"] .member-biometric-card__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+[data-theme="office"] .app-button--biometric-danger:hover {
+  color: var(--app-on-primary);
+  background-color: var(--app-danger);
+}
+
+/*
+ * Member payment and membership controls
+ * --------------------------------------
+ * These controls combine membership receivables and product credit debt. The UI
+ * must stay explicit about payment target so future changes do not route all
+ * payments back to the legacy members.balance-only flow.
+ */
+[data-theme="office"] .member-payment-card,
+[data-theme="office"] .member-adjustment-card,
+[data-theme="office"] .member-history-list {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .member-payment-targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.75rem), 1fr));
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .member-payment-target {
+  position: relative;
+  display: grid;
+  min-inline-size: 0;
+  min-block-size: 3.25rem;
+  padding: 0.625rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  cursor: pointer;
+}
+
+[data-theme="office"] .member-payment-target input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-theme="office"] .member-payment-target span {
+  display: grid;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .member-payment-target strong,
+[data-theme="office"] .member-payment-target small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme="office"] .member-payment-target strong {
+  color: var(--app-text);
+  font-size: 0.6875rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .member-payment-target small {
+  color: var(--app-text-muted);
+  font-size: 0.625rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .member-payment-target--selected {
+  border-color: color-mix(in srgb, var(--app-primary) 48%, white);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .member-adjustment-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 0.4fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .member-adjustment-days,
+[data-theme="office"] .member-adjustment-reason {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--app-control-compact-block-size);
+  padding-inline: 0.75rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+[data-theme="office"] .member-adjustment-save {
+  grid-column: 1 / -1;
+  min-inline-size: 100%;
+}
+
+[data-theme="office"] .member-renewal-section,
+[data-theme="office"] .member-history-section {
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .member-renewal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.75rem), 1fr));
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .member-renewal-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1875rem;
+  min-inline-size: 0;
+  min-block-size: 3.125rem;
+  padding: 0.375rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+[data-theme="office"] .member-renewal-option:hover {
+  border-color: color-mix(in srgb, var(--app-primary) 34%, white);
+  background-color: var(--app-primary-soft);
+}
+
+[data-theme="office"] .member-renewal-option span {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="office"] .member-history-list {
+  max-block-size: 7rem;
+  overflow-y: auto;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+}
+
+[data-theme="office"] .member-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background-color: rgb(15 23 42 / 0.62) !important;
+  backdrop-filter: blur(0.75rem);
+  overscroll-behavior: contain;
+}
+
+[data-theme="office"] .member-panel {
+  display: grid;
+  gap: 1rem;
+  inline-size: 100%;
+  max-width: var(--app-content-max-mobile) !important;
+  max-inline-size: var(--app-content-max-mobile);
+  max-block-size: 90dvh !important;
+  padding: clamp(1rem, 3vw, 1.25rem) clamp(1rem, 3vw, 1.25rem) calc(2rem + var(--app-safe-bottom));
+  overflow-y: auto;
+  border-block-start: 0.0625rem solid var(--app-border) !important;
+  border-start-start-radius: var(--radius-lg) !important;
+  border-start-end-radius: var(--radius-lg) !important;
+  background-color: var(--app-elevated) !important;
+  box-shadow: var(--app-shadow-lg);
+}
+
+[data-theme="office"] .app-modal-card [aria-label^="Cerrar"] {
+  color: var(--app-text-muted);
+}
+
+[data-theme="office"] .app-modal-card [aria-label^="Cerrar"]:hover {
+  color: var(--app-text);
+  background-color: var(--app-surface-muted);
+}
+
+[data-theme="office"].app-confirm-dialog__overlay,
+[data-theme="office"] .app-confirm-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--app-shell-padding);
+  background-color: rgb(15 23 42 / 0.62) !important;
+  backdrop-filter: blur(0.75rem);
+}
+
+[data-theme="office"] .app-confirm-dialog {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.875rem;
+  padding: clamp(1rem, 3vw, 1.375rem);
+  border: 0.0625rem solid var(--app-border);
+  background-color: var(--app-elevated) !important;
+  box-shadow: var(--app-shadow-lg);
+}
+
+[data-theme="office"] .app-confirm-dialog__icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: var(--radius-md);
+  color: var(--app-danger);
+  background-color: var(--app-danger-soft);
+}
+
+[data-theme="office"] .app-confirm-dialog__content {
+  min-inline-size: 0;
+}
+
+[data-theme="office"] .app-confirm-dialog__content h2 {
+  color: var(--app-text);
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+[data-theme="office"] .app-confirm-dialog__content p {
+  margin-block-start: 0.375rem;
+  color: var(--app-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+[data-theme="office"] .app-confirm-dialog__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+  margin-block-start: 0.25rem;
+}
+
+[data-theme="office"] .app-button {
+  min-block-size: 2.5rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+[data-theme="office"] .app-button--secondary {
+  color: var(--app-text);
+  background-color: var(--app-surface-muted);
+  border: 0.0625rem solid var(--app-border);
+}
+
+[data-theme="office"] .app-button--secondary:hover {
+  background-color: var(--app-surface-subtle);
+}
+
+[data-theme="office"] .app-button--primary {
+  color: var(--app-on-primary);
+  background-color: var(--app-primary);
+}
+
+[data-theme="office"] .app-button--primary:hover {
+  background-color: var(--app-primary-hover);
+}
+
+[data-theme="office"] .app-button--danger {
+  color: var(--app-on-primary);
+  background-color: var(--app-danger);
+}
+
+[data-theme="office"] .app-button--danger:hover {
+  filter: brightness(0.95);
+}
+
+[data-theme="office"].app-toast-viewport,
+[data-theme="office"] .app-toast-viewport {
+  position: fixed;
+  inset-block-start: max(1rem, env(safe-area-inset-top));
+  inset-inline: 1rem;
+  z-index: 80;
+  display: grid;
+  justify-items: stretch;
+  gap: 0.625rem;
+  inline-size: min(calc(100vw - 2rem), 28rem);
+  min-block-size: 0;
+  block-size: auto;
+  margin-inline: auto;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+[data-theme="office"].app-toast-viewport:empty,
+[data-theme="office"] .app-toast-viewport:empty {
+  display: none;
+}
+
+[data-theme="office"] .app-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 0.0625rem solid var(--app-border);
+  border-radius: var(--radius-md);
+  background-color: var(--app-elevated);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-lg);
+  pointer-events: auto;
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="office"] .app-toast__icon {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin-block-start: 0.125rem;
+  color: var(--app-primary);
+}
+
+[data-theme="office"] .app-toast__body {
+  min-inline-size: 0;
+  display: grid;
+  gap: 0.125rem;
+}
+
+[data-theme="office"] .app-toast__body strong {
+  font-size: 0.75rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+[data-theme="office"] .app-toast__body span {
+  color: var(--app-text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+[data-theme="office"] .app-toast__close {
+  display: grid;
+  place-items: center;
+  inline-size: var(--app-icon-button-size);
+  block-size: var(--app-icon-button-size);
+  border-radius: var(--radius-sm);
+  color: var(--app-text-muted);
+}
+
+[data-theme="office"] .app-toast__close:hover {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+}
+
+[data-theme="office"] .app-toast--success .app-toast__icon {
+  color: var(--app-success);
+}
+
+[data-theme="office"] .app-toast--warning .app-toast__icon,
+[data-theme="office"] .app-toast--danger .app-toast__icon {
+  color: var(--app-danger);
+}
+
+/*
+ * Responsive layout
+ * -----------------
+ * Mobile is the base design. Tablet expands content width while keeping the
+ * bottom navigation. The desktop rail starts at 80rem so 1024px tablets keep
+ * enough horizontal space for dashboard buttons and cards.
+ */
+@media (min-width: 48rem) {
+  [data-theme="office"] .app-main,
+  [data-theme="office"] .app-nav {
+    max-width: var(--app-content-max-tablet) !important;
+    max-inline-size: var(--app-content-max-tablet);
+  }
+
+  [data-theme="office"] .app-main {
+    padding-inline: clamp(1.25rem, 3vw, 2rem) !important;
+  }
+
+  [data-theme="office"] .app-header-action--desktop {
+    display: inline-grid !important;
+  }
+
+  [data-theme="office"] .dashboard-view {
+    display: grid !important;
+    grid-template-areas:
+      "metrics"
+      "express"
+      "recent";
+    gap: var(--app-shell-gap);
+  }
+
+  [data-theme="office"] .dashboard-view > :not([hidden]) ~ :not([hidden]) {
+    margin-block-start: 0 !important;
+  }
+
+  [data-theme="office"] .dashboard-metrics {
+    grid-area: metrics;
+  }
+
+  [data-theme="office"] .dashboard-express {
+    grid-area: express;
+    min-inline-size: 0;
+  }
+
+  [data-theme="office"] .dashboard-recent {
+    grid-area: recent;
+    min-inline-size: 0;
+  }
+
+  [data-theme="office"] .dashboard-express-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  [data-theme="office"] .store-grid {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)) !important;
+  }
+
+  [data-theme="office"] .members-list,
+  [data-theme="office"] .payments-list,
+  [data-theme="office"] .store-grid {
+    max-block-size: min(64dvh, 44rem) !important;
+  }
+
+  [data-theme="office"] .member-panel-overlay {
+    align-items: center !important;
+    padding: var(--app-shell-padding) !important;
+  }
+
+  [data-theme="office"] .member-panel {
+    max-width: min(92vw, 44rem) !important;
+    max-inline-size: min(92vw, 44rem);
+    border: 0.0625rem solid var(--app-border) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  [data-theme="office"] .app-identity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-theme="office"] .app-identity-field--full {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .app-plan-card {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
+  [data-theme="office"] .app-plan-card__price {
+    justify-items: end;
+  }
+
+  [data-theme="office"] .app-plan-card__actions {
+    grid-template-columns: repeat(2, auto);
+  }
+
+  [data-theme="office"] .app-plan-editor {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(5rem, 0.5fr) minmax(7rem, 0.75fr);
+    align-items: end;
+  }
+
+  [data-theme="office"] .app-plan-editor__active {
+    grid-column: 1 / 3;
+  }
+
+  [data-theme="office"] .app-plan-editor__actions {
+    grid-column: 3 / -1;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  [data-theme="office"] .member-adjustment-row {
+    grid-template-columns: minmax(4.5rem, 0.35fr) minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  [data-theme="office"] .member-adjustment-save {
+    grid-column: auto;
+    min-inline-size: 6rem;
+  }
+
+  [data-theme="office"] .app-identity-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  [data-theme="office"] .app-biometric-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  [data-theme="office"].app-toast-viewport,
+  [data-theme="office"] .app-toast-viewport {
+    inset-inline: auto var(--app-shell-padding);
+    inline-size: min(24rem, calc(100vw - 2rem));
+    margin-inline: 0;
+  }
+}
+
+@media (min-width: 64rem) {
+  [data-theme="office"] .app-main {
+    max-width: var(--app-content-max-desktop) !important;
+    max-inline-size: var(--app-content-max-desktop);
+    margin-inline: auto !important;
+    overflow: visible !important;
+  }
+
+  [data-theme="office"] .app-search {
+    max-inline-size: 48rem;
+  }
+
+  [data-theme="office"] .dashboard-express-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)) !important;
+  }
+
+  [data-theme="office"] .dashboard-recent-list {
+    max-block-size: var(--app-panel-block-size) !important;
+  }
+
+  [data-theme="office"] .store-grid {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)) !important;
+    max-block-size: none !important;
+  }
+
+  [data-theme="office"] .members-list {
+    max-block-size: var(--app-panel-block-size) !important;
+  }
+
+  [data-theme="office"] .accounting-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-theme="office"] .accounting-header,
+  [data-theme="office"] .accounting-metrics,
+  [data-theme="office"] .accounting-ledger {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .member-row {
+    min-block-size: 4.25rem;
+  }
+}
+
+@media (min-width: 80rem) {
+  [data-theme="office"].app-shell {
+    display: grid !important;
+    grid-template-columns: var(--app-nav-rail-width) minmax(0, 1fr);
+    grid-template-rows: 4rem minmax(0, 1fr);
+    grid-template-areas:
+      "header header"
+      "nav    main";
+    column-gap: var(--app-shell-gap);
+    block-size: 100dvh;
+    min-block-size: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-block-size: 100dvh;
+  }
+
+  [data-theme="office"] .app-header {
+    grid-area: header;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    height: 4rem !important;
+    background-color: var(--app-surface) !important;
+    align-self: start;
+  }
+
+  [data-theme="office"] .app-main {
+    grid-area: main;
+    max-width: var(--app-content-max-wide) !important;
+    max-inline-size: var(--app-content-max-wide);
+    margin-inline: 0 auto !important;
+    padding-block-end: var(--app-shell-padding) !important;
+    /* Undo mobile overflow-y that fights the grid scroll container */
+    overflow-y: visible !important;
+  }
+
+  [data-theme="office"] .app-nav {
+    grid-area: nav;
+    /* Override mobile fixed placement when the navigation becomes a rail. */
+    position: sticky !important;
+    inset: auto !important;
+    top: var(--app-shell-padding) !important;
+    align-self: start;
+    inline-size: calc(var(--app-nav-rail-width) - var(--app-shell-padding));
+    max-width: none !important;
+    max-inline-size: none;
+    min-block-size: calc(100dvh - 4rem - calc(var(--app-shell-padding) * 2));
+    margin: var(--app-shell-padding) 0 var(--app-shell-padding) var(--app-shell-padding) !important;
+    padding: 1rem 0.625rem !important;
+    flex-direction: column;
+    justify-content: flex-start !important;
+    gap: 0.5rem;
+    border: 0.0625rem solid var(--app-border) !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  [data-theme="office"] .app-nav__item {
+    inline-size: 100%;
+    min-block-size: 4.25rem;
+    justify-content: center;
+    border-radius: var(--radius-md);
+  }
+
+  [data-theme="office"] .app-nav__item:hover {
+    background-color: var(--app-surface-muted);
+  }
+
+  [data-theme="office"] .dashboard-view {
+    grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.75fr);
+    grid-template-areas:
+      "metrics metrics"
+      "express recent";
+    align-items: start;
+  }
+
+  [data-theme="office"] .dashboard-express-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)) !important;
+  }
+
+  [data-theme="office"] .payments-view {
+    display: grid !important;
+    grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--app-shell-gap);
+  }
+
+  [data-theme="office"] .payments-view > :not([hidden]) ~ :not([hidden]) {
+    margin-block-start: 0 !important;
+  }
+
+  [data-theme="office"] .payments-toolbar {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .payments-summary,
+  [data-theme="office"] .payments-form {
+    grid-column: 1;
+  }
+
+  [data-theme="office"] .payments-list {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    max-block-size: var(--app-panel-block-size) !important;
+  }
+
+  [data-theme="office"] .accounting-view {
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.75fr);
+    align-items: start;
+  }
+
+  [data-theme="office"] .accounting-header {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .accounting-metrics {
+    grid-column: 1;
+  }
+
+  [data-theme="office"] .accounting-metrics--secondary {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  [data-theme="office"] .accounting-ledger {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .member-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--app-shell-gap);
+    max-width: min(92vw, 72rem) !important;
+    max-inline-size: min(92vw, 72rem);
+    max-block-size: min(86dvh, 52rem) !important;
+  }
+
+  [data-theme="office"] .member-panel > :not([hidden]) ~ :not([hidden]) {
+    margin-block-start: 0 !important;
+  }
+
+  [data-theme="office"] .member-panel > :first-child,
+  [data-theme="office"] .member-panel > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  [data-theme="office"] .store-grid {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="office"] *,
+  [data-theme="office"] *::before,
+  [data-theme="office"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

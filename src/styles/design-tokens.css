@@ -1,6 +1,15 @@
 :root {
   color-scheme: light;
 
+  /*
+   * Office theme design contract
+   * ----------------------------
+   * Components should consume these tokens through semantic classes in
+   * `office-theme.css`. Keep layout and control sizing in this styles folder so
+   * desktop/tablet behavior remains auditable from one place.
+   */
+
+  /* Surface and text palette */
   --app-bg: #f4f6f8;
   --app-surface: #ffffff;
   --app-surface-subtle: #f8fafc;
@@ -13,10 +22,12 @@
   --app-border: #d8dee8;
   --app-border-strong: #bcc7d6;
 
+  /* Interaction palette */
   --app-primary: #2563eb;
   --app-primary-hover: #1d4ed8;
   --app-primary-soft: #e8f0ff;
   --app-primary-text: #1e3a8a;
+  --app-on-primary: #ffffff;
 
   --app-success: #047857;
   --app-success-soft: #dff7ed;
@@ -29,10 +40,30 @@
   --app-shadow-md: 0 8px 20px rgb(15 23 42 / 0.08);
   --app-shadow-lg: 0 18px 44px rgb(15 23 42 / 0.14);
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  /* Radius and control sizing use rem values to scale with the user font size. */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --app-control-block-size: 2.5rem;
+  --app-control-compact-block-size: 2.25rem;
+  --app-icon-button-size: 2.25rem;
+  --app-filter-chip-block-size: 2.25rem;
+
+  /*
+   * Layout tokens
+   * Breakpoints stay in media queries because custom properties cannot be used
+   * reliably as `@media` conditions across the current toolchain.
+   */
+  --app-content-max-mobile: 28rem;
+  --app-content-max-tablet: 58rem;
+  --app-content-max-desktop: 92rem;
+  --app-content-max-wide: 108rem;
+  --app-shell-gap: clamp(0.75rem, 1.8vw, 1.5rem);
+  --app-shell-padding: clamp(1rem, 2.5vw, 2rem);
+  --app-nav-rail-width: clamp(5.5rem, 7vw, 7.5rem);
+  --app-panel-block-size: min(72dvh, 48rem);
+  --app-safe-bottom: max(env(safe-area-inset-bottom), 0rem);
 
   --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }

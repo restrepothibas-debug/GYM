@@ -30,3 +30,24 @@ export function getDaysRemaining(dateStr) {
   const today = parseLocalDate(getTodayDateString());
   return Math.ceil((expiry - today) / 86400000);
 }
+
+export function formatMembershipStatus(dateStr) {
+  const daysRemaining = getDaysRemaining(dateStr);
+  if (daysRemaining < 0) {
+    return {
+      daysRemaining,
+      label: `Vencido hace ${Math.abs(daysRemaining)} dia${Math.abs(daysRemaining) === 1 ? '' : 's'}`,
+      tone: 'danger',
+    };
+  }
+
+  if (daysRemaining === 0) {
+    return { daysRemaining, label: 'Vence hoy', tone: 'warning' };
+  }
+
+  return {
+    daysRemaining,
+    label: `${daysRemaining} dia${daysRemaining === 1 ? '' : 's'} restantes`,
+    tone: daysRemaining <= 5 ? 'warning' : 'success',
+  };
+}

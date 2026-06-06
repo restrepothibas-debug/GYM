@@ -332,6 +332,69 @@ npm run lint
 npm run build
 ```
 
+## Flujo: Compatibilidad con migraciones remotas pendientes
+
+Problema que evita:
+
+- Bloquear el inicio de la app con errores como `column tenants.legal_name does not exist` cuando el frontend ya referencia columnas nuevas pero la migracion remota aun no fue aplicada.
+- Mezclar campos opcionales de presentacion con el contrato minimo de login, tenant, licencia y permisos.
+
+Regla:
+
+El workspace post-login solo puede depender de columnas base ya existentes para `tenants`: `id`, `name`, `slug`, `status` y `created_at`. Los campos nuevos de identidad, biometria u otra configuracion opcional deben cargarse con fallback o bloquear solo su propio formulario, no toda la app.
+
+Pasos estandar:
+
+1. Confirmar si la migracion existe localmente en `supabase/migrations/`.
+2. Si Supabase remoto no se puede modificar por token/MCP incorrecto, no agregar columnas opcionales al select critico de inicio sin fallback.
+3. En React, detectar errores de columna faltante (`42703` o `PGRST204`) y repetir la carga con el select base cuando el dato no sea critico para autorizacion.
+4. Mostrar un aviso especifico en el formulario afectado indicando que debe aplicarse la migracion remota.
+
+Verificacion final:
+
+- La pantalla `Preparando cuenta` no debe quedar bloqueada por columnas opcionales faltantes.
+- Login, licencia, dashboard y operaciones principales deben cargar con el contrato base.
+- El formulario de la funcionalidad pendiente debe fallar de forma localizada y accionable.
+
+## Flujo: Empaquetado desktop con Electron
+
+Problema que evita:
+
+- Empaquetar la app sin construir primero el frontend de Vite.
+- Exponer APIs de Node en el renderer o mezclar secretos locales con el bundle.
+- Probar solo la version web y no el contenedor desktop.
+
+Regla:
+
+Electron debe cargar `dist/index.html` en produccion y el servidor Vite solo en desarrollo. El renderer debe mantenerse con `nodeIntegration: false`, `contextIsolation: true` y `sandbox: true`.
+
+Pasos estandar:
+
+1. Revisar `electron/main.cjs`, `electron/preload.cjs` y `package.json`.
+2. Ejecutar la version desktop de desarrollo:
+
+```bash
+npm run desktop:dev
+```
+
+3. Generar build desktop sin instalador:
+
+```bash
+npm run desktop:build
+```
+
+4. Generar instaladores/distribuibles:
+
+```bash
+npm run desktop:package
+```
+
+Verificacion final:
+
+- La ventana debe abrir sin pantalla blanca.
+- Login, dashboard, socios, panel de socio, tienda y caja deben funcionar dentro de Electron.
+- No deben aparecer tokens privados en `dist/`, `release/`, `electron/` ni `package.json`.
+
 ## Plantilla para nuevos flujos
 
 Cuando se agregue un flujo nuevo, usar este formato:

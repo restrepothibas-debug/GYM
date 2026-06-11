@@ -1,6 +1,7 @@
 import { useState, useContext, useEffect, useId, useRef } from 'react';
 import { Package, Plus, X, ShoppingCart } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
+import { PAYMENT_COPY, PRODUCT_COPY } from '../lib/uiLabels';
 import AddProductModal from './AddProductModal';
 
 function Store() {
@@ -14,6 +15,7 @@ function Store() {
   const memberSelectId = useId();
   const paymentMethodId = useId();
   const memberSelectRef = useRef(null);
+  const sellingRef = useRef(false);
 
   useEffect(() => {
     if (!sellModal) return undefined;
@@ -34,14 +36,19 @@ function Store() {
   }, [sellModal]);
 
   const handleSell = async () => {
-    if (!selectedMember) return;
+    if (!sellModal || !selectedMember || sellingRef.current) return;
+    sellingRef.current = true;
     setSelling(true);
-    const sold = await sellProduct(sellModal.id, selectedMember, paymentMethod);
-    setSelling(false);
-    if (sold) {
-      setSellModal(null);
-      setSelectedMember('');
-      setPaymentMethod('credito');
+    try {
+      const sold = await sellProduct(sellModal.id, selectedMember, paymentMethod);
+      if (sold) {
+        setSellModal(null);
+        setSelectedMember('');
+        setPaymentMethod('credito');
+      }
+    } finally {
+      sellingRef.current = false;
+      setSelling(false);
     }
   };
 
@@ -75,8 +82,8 @@ function Store() {
                       Stock: {p.stock}
                     </span>
                   </div>
-                  <h4 className="font-bold text-[11px] text-slate-200 mt-2 line-clamp-2">{p.name}</h4>
-                  <span className="font-extrabold text-xs text-indigo-400 mt-1 block">${p.price.toLocaleString()}</span>
+                  <h4 className="store-product-title font-bold text-[11px] text-slate-200 mt-2">{p.name}</h4>
+                  <span className="store-product-price font-extrabold text-xs text-indigo-400 mt-1 block">${p.price.toLocaleString()}</span>
                 </div>
                 <button
                   type="button"
@@ -84,7 +91,7 @@ function Store() {
                   disabled={p.stock === 0}
                   className="store-card-action w-full h-8 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/30 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {p.stock === 0 ? 'Sin Stock' : 'Asignar / Vender'}
+                  {p.stock === 0 ? 'Sin stock' : PRODUCT_COPY.assignToAthleteAction}
                 </button>
               </div>
             );
@@ -117,7 +124,7 @@ function Store() {
             </div>
             <div className="p-4 space-y-3.5">
               <div className="space-y-1">
-                <label htmlFor={memberSelectId} className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 1: Selecciona un Socio *</label>
+                <label htmlFor={memberSelectId} className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Paso 1: Selecciona un Atleta *</label>
                 <select
                   id={memberSelectId}
                   ref={memberSelectRef}
@@ -126,7 +133,7 @@ function Store() {
                   onChange={e => setSelectedMember(e.target.value)}
                   className="w-full h-10 px-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
                 >
-                  <option value="">-- Elige un socio --</option>
+                  <option value="">-- Elige un atleta --</option>
                   {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </div>
@@ -139,7 +146,7 @@ function Store() {
                   onChange={e => setPaymentMethod(e.target.value)}
                   className="w-full h-10 px-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
                 >
-                  <option value="credito">A Credito (deuda de producto)</option>
+                  <option value="credito">A Crédito (deuda de producto)</option>
                   <option value="efectivo">Pagar ahora en efectivo</option>
                   <option value="tarjeta">Pagar ahora con tarjeta</option>
                 </select>
@@ -152,7 +159,7 @@ function Store() {
               >
                 {selling
                   ? 'Procesando…'
-                  : `${paymentMethod === 'credito' ? 'Asignar a Credito' : 'Registrar Pago'} — $${sellModal.price.toLocaleString()}`}
+                  : `${paymentMethod === 'credito' ? 'Asignar producto a crédito' : PAYMENT_COPY.action} — $${sellModal.price.toLocaleString()}`}
               </button>
             </div>
           </div>

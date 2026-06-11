@@ -2,11 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { GymProvider } from '../context/GymContext';
 import { UiProvider } from '../context/UiContext';
+import { ATTENDANCE_COPY } from '../lib/uiLabels';
 import Dashboard from './Dashboard';
 import Members from './Members';
 import BottomSheet from './BottomSheet';
 
-// Helper para envolver con el proveedor y un miembro de prueba precargado
+// Helper para envolver con el proveedor y un atleta de prueba precargado
 function localStorageMock() {
   let store = {};
   return {
@@ -55,28 +56,28 @@ describe('Fase 3 — Integración UI', () => {
     // 1 checkin de hoy — usamos getAllByText porque '1' puede aparecer varias veces
     const ones = screen.getAllByText('1');
     expect(ones.length).toBeGreaterThan(0);
-    // El miembro tiene -10000 de deuda — buscar con regex por el monto
+    // El atleta tiene -10000 de deuda — buscar con regex por el monto
     expect(screen.getByText(/10.000|10,000/)).toBeTruthy();
   });
 
-  // ── Test 2: Botón "Entrar" registra asistencia y se deshabilita ──
-  it('Botón Entrar en tarjeta frecuente registra asistencia y cambia estado', () => {
+  // ── Test 2: Botón de registro diario registra asistencia y se deshabilita ──
+  it('Botón de registro diario en tarjeta frecuente registra asistencia y cambia estado', () => {
     renderWithContext(
       <Dashboard openBottomSheet={() => {}} />,
       { members: [SEED_MEMBER] }
     );
 
-    const btn = screen.getByText('Entrar');
+    const btn = screen.getByText(ATTENDANCE_COPY.action);
     expect(btn).toBeTruthy();
 
     act(() => { fireEvent.click(btn); });
 
-    // Después del click el botón debería cambiar a "Listo"
-    expect(screen.getByText('Listo')).toBeTruthy();
+    // Después del click el botón debería cambiar a estado registrado.
+    expect(screen.getByText(ATTENDANCE_COPY.registered)).toBeTruthy();
   });
 
   // ── Test 3: Members renderiza la lista filtrada ──
-  it('Members renderiza el socio en la lista y abre BottomSheet al hacer click', () => {
+  it('Members renderiza el atleta en la lista y abre BottomSheet al hacer click', () => {
     const openMock = vi.fn();
     renderWithContext(
       <Members openBottomSheet={openMock} />,
@@ -90,8 +91,8 @@ describe('Fase 3 — Integración UI', () => {
     expect(openMock).toHaveBeenCalledWith('m1');
   });
 
-  // ── Test 4: BottomSheet muestra datos correctos del socio ──
-  it('BottomSheet muestra nombre y balance del socio correctamente', () => {
+  // ── Test 4: BottomSheet muestra datos correctos del atleta ──
+  it('BottomSheet muestra nombre y balance del atleta correctamente', () => {
     renderWithContext(
       <BottomSheet memberId="m1" onClose={() => {}} />,
       { members: [SEED_MEMBER], products: [SEED_PRODUCT] }
@@ -103,7 +104,7 @@ describe('Fase 3 — Integración UI', () => {
   });
 
   // ── Test 5: BottomSheet — asistencia ya registrada deshabilita botón ──
-  it('BottomSheet deshabilita 1-Clic si el socio ya fue registrado hoy', () => {
+  it('BottomSheet deshabilita 1-Clic si el atleta ya fue registrado hoy', () => {
     const today = new Date().toISOString().split('T')[0];
     renderWithContext(
       <BottomSheet memberId="m1" onClose={() => {}} />,
@@ -113,7 +114,7 @@ describe('Fase 3 — Integración UI', () => {
       }
     );
 
-    const btn = screen.getByText('Ya registrado');
+    const btn = screen.getByText(ATTENDANCE_COPY.registered);
     expect(btn).toBeTruthy();
     expect(btn.disabled).toBe(true);
   });

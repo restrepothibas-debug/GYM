@@ -1,9 +1,7 @@
-import { useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Building2, Palette, Plus, Save, Settings, X } from 'lucide-react';
+import { useContext, useEffect, useId, useRef, useState } from 'react';
+import { Building2, Palette, Save, X } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
 import { useUi } from '../context/UiContext';
-import { formatCurrency } from '../lib/accounting';
-import { DEFAULT_MEMBERSHIP_PLANS, getActiveMembershipPlans, sortMembershipPlans } from '../lib/membershipPlans';
 
 function getIdentityState(activeTenant) {
   return {
@@ -20,30 +18,9 @@ function getIdentityState(activeTenant) {
   };
 }
 
-function getPlanDraft(plan = {}) {
-  return {
-    id: plan.id || '',
-    planKey: plan.planKey || '',
-    name: plan.name || '',
-    durationDays: String(plan.durationDays ?? 30),
-    price: String(plan.price ?? 0),
-    active: plan.active !== false,
-    sortOrder: String(plan.sortOrder ?? 100),
-  };
-}
-
-function canManageTenantConfiguration(activeTenant) {
-  // Local/demo mode has no tenant role. Remote mode relies on RLS/RPC too, but
-  // this UI guard prevents staff users from seeing write actions they cannot use.
-  return !activeTenant?.role || ['owner', 'admin'].includes(activeTenant.role);
-}
-
 function GymIdentityModal({ onClose }) {
   const {
     activeTenant,
-    deactivateMembershipPlan,
-    membershipPlans,
-    saveMembershipPlan,
     tenantIdentitySchemaReady,
     updateTenantIdentity,
   } = useContext(GymContext);
@@ -52,14 +29,10 @@ function GymIdentityModal({ onClose }) {
    * Initialize once from the active tenant. GymContext remains the source of
    * truth; closing and reopening rehydrates fresh tenant data instead of this
    * form overwriting fields while an admin is editing.
-   */
+  */
   const [formState, setFormState] = useState(() => getIdentityState(activeTenant));
-  const [planDraft, setPlanDraft] = useState(() => getPlanDraft());
-  const [editingPlanId, setEditingPlanId] = useState('');
   const [error, setError] = useState('');
-  const [planError, setPlanError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [savingPlan, setSavingPlan] = useState(false);
   const firstInputRef = useRef(null);
   const modalTitleId = useId();
   const nameInputId = useId();
@@ -72,17 +45,6 @@ function GymIdentityModal({ onClose }) {
   const logoInputId = useId();
   const colorInputId = useId();
   const receiptFooterInputId = useId();
-  const planNameInputId = useId();
-  const planKeyInputId = useId();
-  const planDurationInputId = useId();
-  const planPriceInputId = useId();
-  const canManagePlans = canManageTenantConfiguration(activeTenant);
-  const visiblePlans = useMemo(() => (
-    sortMembershipPlans(membershipPlans.length ? membershipPlans : DEFAULT_MEMBERSHIP_PLANS)
-  ), [membershipPlans]);
-  const activePlanCount = useMemo(() => (
-    getActiveMembershipPlans(visiblePlans).length
-  ), [visiblePlans]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -114,93 +76,6 @@ function GymIdentityModal({ onClose }) {
       ...currentState,
       brand_color: '',
     }));
-  };
-
-  const updatePlanField = (field) => (event) => {
-    setPlanError('');
-    setPlanDraft(currentDraft => ({
-      ...currentDraft,
-      [field]: field === 'active' ? event.target.checked : event.target.value,
-    }));
-  };
-
-  const handleEditPlan = (plan) => {
-    setPlanError('');
-    setEditingPlanId(plan.id || plan.planKey);
-    setPlanDraft(getPlanDraft(plan));
-  };
-
-  const handleResetPlanDraft = () => {
-    setPlanError('');
-    setEditingPlanId('');
-    setPlanDraft(getPlanDraft());
-  };
-
-  const handleSavePlan = async () => {
-    const durationDays = Number(planDraft.durationDays);
-    const price = Number(planDraft.price);
-    const sortOrder = Number(planDraft.sortOrder || 100);
-
-    if (!canManagePlans) {
-      setPlanError('Solo administradores del gimnasio pueden editar planes.');
-      return;
-    }
-
-    if (!planDraft.name.trim() || !durationDays || durationDays <= 0 || price < 0) {
-      setPlanError('El plan necesita nombre, dias positivos y precio valido.');
-      return;
-    }
-
-    setSavingPlan(true);
-
-    /*
-     * Membership plans are tenant operational configuration. The UI keeps this
-     * edit separated from identity fields, while GymContext/Supabase enforce the
-     * same plan catalog used by enrollment and renewal RPCs.
-     */
-    const saved = await Promise.resolve(saveMembershipPlan({
-      id: planDraft.id || '',
-      planKey: planDraft.planKey,
-      name: planDraft.name,
-      durationDays,
-      price,
-      active: planDraft.active,
-      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 100,
-    }));
-
-    setSavingPlan(false);
-
-    if (!saved) {
-      setPlanError('No se pudo guardar el plan de membresia.');
-      return;
-    }
-
-    notify({
-      title: 'Plan guardado',
-      message: 'El catalogo de membresias quedo actualizado.',
-      tone: 'success',
-    });
-    handleResetPlanDraft();
-  };
-
-  const handleDeactivatePlan = async (plan) => {
-    if (!canManagePlans) {
-      setPlanError('Solo administradores del gimnasio pueden desactivar planes.');
-      return;
-    }
-
-    const deactivated = await Promise.resolve(deactivateMembershipPlan(plan.id || plan.planKey));
-    if (!deactivated) {
-      setPlanError('No se pudo desactivar el plan.');
-      return;
-    }
-
-    notify({
-      title: 'Plan desactivado',
-      message: `${plan.name} ya no aparece como opcion activa.`,
-      tone: 'success',
-    });
-    if (editingPlanId === (plan.id || plan.planKey)) handleResetPlanDraft();
   };
 
   const handleSubmit = async (event) => {
@@ -465,150 +340,6 @@ function GymIdentityModal({ onClose }) {
             </div>
             </div>
 
-            <section
-              className="app-plan-config"
-              aria-label="Configuracion de planes de membresia"
-              onKeyDown={(event) => {
-                /*
-                 * Plan inputs live inside the identity modal's scroll area. Stop
-                 * Enter from submitting tenant identity while an admin is editing
-                 * catalog data; plan saves must go through handleSavePlan only.
-                 */
-                if (event.key === 'Enter') event.preventDefault();
-              }}
-            >
-              <div className="app-plan-config__header">
-                <div>
-                  <h3>
-                    <Settings className="w-3.5 h-3.5" aria-hidden="true" />
-                    Planes de membresia
-                  </h3>
-                  <p>{activePlanCount} planes activos para inscripcion y renovacion.</p>
-                </div>
-                {!canManagePlans && (
-                  <span className="app-plan-config__role">Solo lectura</span>
-                )}
-              </div>
-
-              {planError && (
-                <p role="alert" className="app-identity-error">
-                  {planError}
-                </p>
-              )}
-
-              <div className="app-plan-list">
-                {visiblePlans.map(plan => (
-                  <article
-                    key={plan.id || plan.planKey}
-                    className={`app-plan-card ${plan.active === false ? 'app-plan-card--inactive' : ''}`}
-                  >
-                    <div className="app-plan-card__main">
-                      <strong>{plan.name}</strong>
-                      <span>{plan.planKey} · {plan.durationDays} dias</span>
-                    </div>
-                    <div className="app-plan-card__price">
-                      <strong>{formatCurrency(plan.price)}</strong>
-                      <span>{plan.active === false ? 'Inactivo' : 'Activo'}</span>
-                    </div>
-                    {canManagePlans && (
-                      <div className="app-plan-card__actions">
-                        <button
-                          type="button"
-                          onClick={() => handleEditPlan(plan)}
-                          className="app-button app-button--secondary"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeactivatePlan(plan)}
-                          disabled={plan.active === false}
-                          className="app-button app-button--secondary"
-                        >
-                          Desactivar
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
-
-              <div className="app-plan-editor">
-                <div className="app-identity-field">
-                  <label className="app-identity-label" htmlFor={planNameInputId}>Nombre del plan</label>
-                  <input
-                    id={planNameInputId}
-                    type="text"
-                    value={planDraft.name}
-                    onChange={updatePlanField('name')}
-                    disabled={!canManagePlans}
-                    className="app-identity-input"
-                  />
-                </div>
-                <div className="app-identity-field">
-                  <label className="app-identity-label" htmlFor={planKeyInputId}>Clave interna</label>
-                  <input
-                    id={planKeyInputId}
-                    type="text"
-                    value={planDraft.planKey}
-                    onChange={updatePlanField('planKey')}
-                    disabled={!canManagePlans || Boolean(planDraft.id || editingPlanId)}
-                    className="app-identity-input"
-                  />
-                </div>
-                <div className="app-identity-field">
-                  <label className="app-identity-label" htmlFor={planDurationInputId}>Dias</label>
-                  <input
-                    id={planDurationInputId}
-                    type="number"
-                    min="1"
-                    value={planDraft.durationDays}
-                    onChange={updatePlanField('durationDays')}
-                    disabled={!canManagePlans}
-                    className="app-identity-input"
-                  />
-                </div>
-                <div className="app-identity-field">
-                  <label className="app-identity-label" htmlFor={planPriceInputId}>Precio</label>
-                  <input
-                    id={planPriceInputId}
-                    type="number"
-                    min="0"
-                    value={planDraft.price}
-                    onChange={updatePlanField('price')}
-                    disabled={!canManagePlans}
-                    className="app-identity-input"
-                  />
-                </div>
-                <label className="app-plan-editor__active">
-                  <input
-                    type="checkbox"
-                    checked={planDraft.active}
-                    onChange={updatePlanField('active')}
-                    disabled={!canManagePlans}
-                  />
-                  <span>Disponible para ventas</span>
-                </label>
-                <div className="app-plan-editor__actions">
-                  <button
-                    type="button"
-                    onClick={handleResetPlanDraft}
-                    className="app-button app-button--secondary"
-                  >
-                    Limpiar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSavePlan}
-                    disabled={!canManagePlans || savingPlan}
-                    className="app-primary-action app-plan-editor__save"
-                  >
-                    <Plus className="w-4 h-4" aria-hidden="true" />
-                    {savingPlan ? 'Guardando' : editingPlanId ? 'Actualizar plan' : 'Agregar plan'}
-                  </button>
-                </div>
-              </div>
-            </section>
           </div>
 
           <div className="app-identity-actions">

@@ -4,6 +4,7 @@ import { GymContext } from '../context/GymContext';
 import { useUi } from '../context/UiContext';
 import { formatCurrency, getMemberDebtBreakdown } from '../lib/accounting';
 import { formatMembershipStatus, getDaysRemaining } from '../lib/dateUtils';
+import { ATHLETE_COPY } from '../lib/uiLabels';
 
 function Members({ openBottomSheet }) {
   const { deleteMember, members } = useContext(GymContext);
@@ -25,17 +26,17 @@ function Members({ openBottomSheet }) {
   const handleDelete = async (event, member) => {
     event.stopPropagation();
     const confirmed = await confirm({
-      title: 'Eliminar usuario activo',
-      message: `¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`,
-      confirmLabel: 'Eliminar usuario',
+      title: ATHLETE_COPY.deleteConfirmTitle,
+      message: `¿Eliminar a ${member.name} de los atletas activos? Su historial contable, compras y asistencias se conserva.`,
+      confirmLabel: ATHLETE_COPY.deleteAction,
     });
     if (!confirmed) return;
 
     const removed = await deleteMember(member.id);
     if (removed) {
       notify({
-        title: 'Usuario eliminado',
-        message: `${member.name} ya no aparece en usuarios activos.`,
+        title: ATHLETE_COPY.deleteSuccessTitle,
+        message: `${member.name} ya no aparece en atletas activos.`,
         tone: 'success',
       });
     }
@@ -63,7 +64,7 @@ function Members({ openBottomSheet }) {
   return (
     <div className="members-view space-y-3 animate-fadeIn">
       <div className="flex flex-col gap-2">
-        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Base de Datos de Miembros</h3>
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{ATHLETE_COPY.moduleTitle}</h3>
         <div className="members-filters flex gap-1 overflow-x-auto pb-1">
           {filters.map(f => (
             <button
@@ -80,12 +81,12 @@ function Members({ openBottomSheet }) {
 
       <div className="members-list space-y-2 max-h-[55vh] overflow-y-auto rounded-xl pr-1">
         {filteredMembers.length === 0 ? (
-          <p className="text-[10px] text-slate-500 py-6 text-center">Ningún miembro coincide con este filtro.</p>
+          <p className="text-[10px] text-slate-500 py-6 text-center">{ATHLETE_COPY.listEmpty}</p>
         ) : (
           filteredMembers.map(m => {
             const membershipStatus = formatMembershipStatus(m.expiryDate);
-            const statusColor = membershipStatus.tone === 'danger' ? 'text-rose-400' : membershipStatus.tone === 'warning' ? 'text-amber-400' : 'text-emerald-400';
             const debtBreakdown = getMemberDebtBreakdown(m);
+            const statusColor = membershipStatus.tone === 'danger' ? 'text-rose-400' : membershipStatus.tone === 'warning' ? 'text-amber-400' : 'text-emerald-400';
             const balanceColor = debtBreakdown.totalDebt > 0 ? 'text-rose-400' : m.balance > 0 ? 'text-emerald-400' : 'text-slate-400';
 
             return (
@@ -116,14 +117,14 @@ function Members({ openBottomSheet }) {
                       {debtBreakdown.totalDebt > 0
                         ? `Debe ${formatCurrency(debtBreakdown.totalDebt)}`
                         : m.balance > 0
-                          ? `Credito ${formatCurrency(m.balance)}`
-                          : 'Al dia'}
+                          ? `Crédito ${formatCurrency(m.balance)}`
+                          : 'Al día'}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={(event) => handleDelete(event, m)}
-                    aria-label={`Eliminar usuario ${m.name}`}
+                    aria-label={`Eliminar atleta ${m.name}`}
                     className="app-icon-button app-icon-button--danger w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />

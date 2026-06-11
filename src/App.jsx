@@ -12,8 +12,21 @@ import AuthGate from './components/AuthGate';
 import BiometricCheckinModal from './components/BiometricCheckinModal';
 import BiometricSettingsModal from './components/BiometricSettingsModal';
 import GymIdentityModal from './components/GymIdentityModal';
+import MembershipPlans from './components/MembershipPlans';
 import { formatCurrency, getMemberDebtBreakdown } from './lib/accounting';
 import { getDaysRemaining, getTodayDateString } from './lib/dateUtils';
+import { ATHLETE_COPY } from './lib/uiLabels';
+
+const MAIN_NAV_ITEMS = [
+  { key: 'dashboard', label: 'Inicio', icon: CheckCircle },
+  { key: 'members', label: ATHLETE_COPY.menuLabel, icon: Users },
+  { key: 'biometrics', label: 'Huella', icon: Fingerprint },
+  { key: 'plans', label: 'Planes', icon: Dumbbell },
+  { key: 'store', label: 'Tienda', icon: ShoppingBag },
+  { key: 'payments', label: 'Caja', icon: CreditCard },
+  { key: 'accounting', label: 'Contab.', icon: BarChart3 },
+  { key: 'settings', label: 'Ajustes', icon: Settings },
+];
 
 function isLicenseUsable(license) {
   if (!license) return false;
@@ -33,7 +46,7 @@ function AccountLoadingScreen({ canSignOut, error, onRetry, onSignOut }) {
           <div>
             <h1 className="text-sm font-black text-white">Preparando cuenta</h1>
             <p className="text-[10px] text-slate-500 leading-relaxed">
-              Validando sesion, tenant, licencia y permisos de acceso.
+              Validando sesión, tenant, licencia y permisos de acceso.
             </p>
           </div>
         </div>
@@ -60,12 +73,124 @@ function AccountLoadingScreen({ canSignOut, error, onRetry, onSignOut }) {
               disabled={!canSignOut}
               className="h-10 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-xs font-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cerrar sesion
+              Cerrar sesión
             </button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function SettingsModuleButton({ actionLabel = 'Abrir', detail, icon: Icon, meta, onClick, title, tone = 'default' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`settings-module-card settings-module-card--${tone}`}
+    >
+      <span className="settings-module-card__icon" aria-hidden="true">
+        <Icon className="w-4 h-4" aria-hidden="true" />
+      </span>
+      <span className="settings-module-card__content">
+        <strong>{title}</strong>
+        <span>{detail}</span>
+        {meta && <small>{meta}</small>}
+      </span>
+      <span className="settings-module-card__action">{actionLabel}</span>
+    </button>
+  );
+}
+
+function SettingsView({
+  activeTenant,
+  isRemoteEnabled,
+  onOpenGymIdentity,
+  onSignOut,
+}) {
+  return (
+    <section className="settings-view animate-fadeIn" aria-labelledby="settings-title">
+      <div className="settings-header">
+        <div>
+          <span className="settings-eyebrow">Menu principal</span>
+          <h3 id="settings-title">Ajustes</h3>
+          <p>{activeTenant?.name || 'Gimnasio local'}</p>
+        </div>
+      </div>
+
+      <div className="settings-module-grid">
+        <SettingsModuleButton
+          icon={Building2}
+          title="Identidad del gimnasio"
+          detail="Perfil, contacto, logo y recibos"
+          meta={activeTenant?.city || activeTenant?.phone || activeTenant?.email || 'Sin datos de contacto'}
+          onClick={onOpenGymIdentity}
+        />
+        {isRemoteEnabled && (
+          <SettingsModuleButton
+            actionLabel="Salir"
+            icon={LogOut}
+            title="Cerrar sesión"
+            detail="Cuenta remota activa"
+            meta={activeTenant?.role ? `Rol: ${activeTenant.role}` : 'Sesion autenticada'}
+            onClick={onSignOut}
+            tone="danger"
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function BiometricView({
+  activeTenant,
+  biometricDeviceStatus,
+  biometricProvider,
+  memberBiometrics = [],
+  onOpenBiometricCheckin,
+  onOpenBiometricSettings,
+  onOpenMembers,
+}) {
+  const activeBiometricCount = memberBiometrics.filter(enrollment => enrollment.status === 'active').length;
+  const deviceStatus = biometricDeviceStatus?.available ? 'Disponible' : 'Pendiente';
+
+  return (
+    <section className="biometric-view animate-fadeIn" aria-labelledby="biometric-title">
+      <div className="biometric-header">
+        <div>
+          <span className="biometric-eyebrow">Control biométrico</span>
+          <h3 id="biometric-title">
+            <Fingerprint className="w-4 h-4" aria-hidden="true" />
+            Huella dactilar
+          </h3>
+          <p>{activeTenant?.name || 'Gimnasio local'}</p>
+        </div>
+      </div>
+
+      <div className="settings-module-grid">
+        <SettingsModuleButton
+          icon={Fingerprint}
+          title="Ingreso por huella"
+          detail="Registro por huella"
+          meta={`Proveedor: ${biometricProvider}`}
+          onClick={onOpenBiometricCheckin}
+        />
+        <SettingsModuleButton
+          icon={Settings}
+          title="Lector de huellas"
+          detail="Proveedor y estado del dispositivo"
+          meta={`Estado: ${deviceStatus}`}
+          onClick={onOpenBiometricSettings}
+        />
+        <SettingsModuleButton
+          icon={Users}
+          title="Huellas de atletas"
+          detail="Enrolar, verificar y revocar"
+          meta={`${activeBiometricCount} huellas activas`}
+          onClick={onOpenMembers}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -83,12 +208,15 @@ function App() {
     activeLicense,
     activeTenant,
     authLoading,
+    biometricDeviceStatus,
+    biometricProvider,
     cashFlow,
     checkinsToday,
     clearError,
     dataLoading,
     error,
     isRemoteEnabled,
+    memberBiometrics,
     members,
     products,
     refreshWorkspace,
@@ -98,6 +226,9 @@ function App() {
     workspaceLoading,
   } = useContext(GymContext);
   const cleanSearch = searchQuery.trim().toLowerCase();
+  const tenantDisplayName = activeTenant?.name && activeTenant.name !== 'GYM-FLOW'
+    ? activeTenant.name
+    : 'Gimnasio local';
   const searchResults = cleanSearch
     ? members.filter(member =>
         member.name.toLowerCase().includes(cleanSearch) ||
@@ -114,6 +245,14 @@ function App() {
   const openMemberFromSearch = (memberId) => {
     setSelectedMemberId(memberId);
     setSearchQuery('');
+  };
+
+  const openGymIdentityModal = () => {
+    setIsGymIdentityModalOpen(true);
+  };
+
+  const openMembersModule = () => {
+    setActiveTab('members');
   };
 
   const handleCheckinFeedback = (member) => {
@@ -175,53 +314,17 @@ function App() {
 
       {/* HEADER */}
       <header className="app-header">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center font-black text-white shadow-lg shadow-indigo-600/30">
-            <Dumbbell className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="font-black text-sm tracking-tight block bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">GYM-FLOW</span>
-            <span className="text-[8px] text-indigo-400 tracking-widest font-black uppercase block truncate max-w-[150px]">
-              {activeTenant?.name || 'Gestión Inteligente'}
-            </span>
+        <div className="app-brand">
+          <Dumbbell className="app-brand__icon" aria-hidden="true" />
+          <div className="app-brand__copy">
+            <span className="app-brand__product">Syncro-Gym</span>
+            <strong className="app-brand__tenant">
+              {tenantDisplayName}
+            </strong>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsBiometricCheckinModalOpen(true)}
-            aria-label="Registrar entrada por huella"
-            className="app-icon-button app-header-action"
-          >
-            <Fingerprint className="w-4 h-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsBiometricSettingsModalOpen(true)}
-            aria-label="Configurar lector de huellas"
-            className="app-icon-button app-header-action app-header-action--desktop"
-          >
-            <Settings className="w-4 h-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsGymIdentityModalOpen(true)}
-            aria-label="Editar identidad del gimnasio"
-            className="app-icon-button app-header-action"
-          >
-            <Building2 className="w-4 h-4" aria-hidden="true" />
-          </button>
-          {isRemoteEnabled && (
-            <button
-              type="button"
-              onClick={signOut}
-              aria-label="Cerrar sesión"
-              className="app-icon-button app-header-action"
-            >
-              <LogOut className="w-4 h-4" aria-hidden="true" />
-            </button>
-          )}
+        <div className="app-header-actions">
           <button
             type="button"
             onClick={() => setIsAddMemberModalOpen(true)}
@@ -289,7 +392,7 @@ function App() {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Buscar socio por nombre o CC…"
+              placeholder={ATHLETE_COPY.searchPlaceholder}
               className="w-full h-11 pl-10 pr-10 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
             />
             {searchQuery && (
@@ -307,7 +410,7 @@ function App() {
           {cleanSearch && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl max-h-56 overflow-y-auto divide-y divide-slate-800/60 shadow-2xl animate-fadeIn">
               {searchResults.length === 0 ? (
-                <p className="p-3 text-[10px] text-slate-500 text-center">Ningun socio coincide.</p>
+                <p className="p-3 text-[10px] text-slate-500 text-center">{ATHLETE_COPY.searchEmpty}</p>
               ) : (
                 searchResults.map(member => (
                   <button
@@ -341,6 +444,20 @@ function App() {
             openBottomSheet={setSelectedMemberId} 
           />
         )}
+        {activeTab === 'biometrics' && (
+          <BiometricView
+            activeTenant={activeTenant}
+            biometricDeviceStatus={biometricDeviceStatus}
+            biometricProvider={biometricProvider}
+            memberBiometrics={memberBiometrics}
+            onOpenBiometricCheckin={() => setIsBiometricCheckinModalOpen(true)}
+            onOpenBiometricSettings={() => setIsBiometricSettingsModalOpen(true)}
+            onOpenMembers={openMembersModule}
+          />
+        )}
+        {activeTab === 'plans' && (
+          <MembershipPlans />
+        )}
         {activeTab === 'store' && (
           <Store 
             products={products} 
@@ -354,50 +471,30 @@ function App() {
         {activeTab === 'accounting' && (
           <Accounting />
         )}
+        {activeTab === 'settings' && (
+          <SettingsView
+            activeTenant={activeTenant}
+            isRemoteEnabled={isRemoteEnabled}
+            onOpenGymIdentity={openGymIdentityModal}
+            onSignOut={signOut}
+          />
+        )}
       </main>
 
       {/* BOTTOM NAVIGATION */}
-      <nav className="app-nav">
-        <button 
-          type="button"
-          onClick={() => setActiveTab('dashboard')} 
-          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'dashboard' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-        >
-          <CheckCircle className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[8px] tracking-wider uppercase font-extrabold">Inicio</span>
-        </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('members')} 
-          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'members' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-        >
-          <Users className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[8px] tracking-wider uppercase font-extrabold">Socios</span>
-        </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('store')} 
-          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'store' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-        >
-          <ShoppingBag className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[8px] tracking-wider uppercase font-extrabold">Tienda</span>
-        </button>
-        <button 
-          type="button"
-          onClick={() => setActiveTab('payments')} 
-          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'payments' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-        >
-          <CreditCard className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[8px] tracking-wider uppercase font-extrabold">Caja</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('accounting')}
-          className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === 'accounting' ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-        >
-          <BarChart3 className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[8px] tracking-wider uppercase font-extrabold">Contab.</span>
-        </button>
+      <nav className="app-nav" aria-label="Menu principal">
+        {MAIN_NAV_ITEMS.map(({ icon: Icon, key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            aria-current={activeTab === key ? 'page' : undefined}
+            className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === key ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+          >
+            <Icon className="w-5 h-5" aria-hidden="true" />
+            <span className="app-nav__label">{label}</span>
+          </button>
+        ))}
       </nav>
 
       {/* MODALS */}

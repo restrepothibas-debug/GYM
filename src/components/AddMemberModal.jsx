@@ -70,7 +70,7 @@ function AddMemberModal({ onClose }) {
     if (saved) {
       onClose();
     } else {
-      setError('No se pudo registrar el socio.');
+      setError('No se pudo registrar el atleta.');
       setSaving(false);
     }
   };
@@ -139,11 +139,11 @@ function AddMemberModal({ onClose }) {
             </div>
           </div>
           <p className="text-[9px] text-slate-500 leading-relaxed">
-            Si el pago es igual al plan, el socio queda al día. Si paga menos, queda saldo por cobrar; si paga de más, queda crédito a favor.
+            Si el pago es igual al plan, el atleta queda al día. Si paga menos, queda saldo por cobrar; si paga de más, queda crédito a favor.
           </p>
           <button type="submit" disabled={saving}
             className="app-primary-action w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all">
-            {saving ? 'Guardando…' : 'Registrar Socio y Cobrar'}
+            {saving ? 'Guardando…' : 'Registrar Atleta y Cobrar'}
           </button>
         </form>
       </div>

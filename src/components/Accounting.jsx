@@ -5,7 +5,7 @@ import { formatCurrency } from '../lib/accounting';
 import { buildAccountingSummary, getRecentLedgerTransactions } from '../lib/accountingReports';
 
 const REVENUE_LABELS = {
-  membership_revenue: 'Membresia',
+  membership_revenue: 'Membresía',
   product_revenue: 'Producto',
   other_income: 'Otros',
 };
@@ -53,7 +53,7 @@ function Accounting() {
       </div>
 
       <section className="accounting-metrics">
-        <AccountingMetric icon={CircleDollarSign} label="Membresias" value={summary.membershipRevenue} tone="revenue" />
+        <AccountingMetric icon={CircleDollarSign} label="Membresías" value={summary.membershipRevenue} tone="revenue" />
         <AccountingMetric icon={ReceiptText} label="Productos" value={summary.productRevenue} tone="product" />
         <AccountingMetric icon={TrendingUp} label="Otros ingresos" value={summary.otherIncome} tone="other" />
         <AccountingMetric icon={TrendingDown} label="Gastos" value={summary.operatingExpense} tone="expense" />
@@ -63,7 +63,7 @@ function Accounting() {
         <AccountingMetric icon={WalletCards} label="Caja neta" value={summary.cashNet} tone="cash" />
         <AccountingMetric icon={CreditCard} label="Tarjetas por cobrar" value={summary.cardReceivable} tone="card" />
         <AccountingMetric icon={BarChart3} label="Cuentas por cobrar" value={summary.accountsReceivable} tone="receivable" />
-        <AccountingMetric icon={ReceiptText} label="Creditos socios" value={summary.customerCredits} tone="credit" />
+        <AccountingMetric icon={ReceiptText} label="Créditos atletas" value={summary.customerCredits} tone="credit" />
       </section>
 
       <section className="accounting-ledger">

@@ -144,6 +144,62 @@ codex
 
 No ejecutar `codex mcp login supabase` salvo que el usuario pida explicitamente usar OAuth y confirme la cuenta correcta en el navegador.
 
+## Flujo: Crear cuenta de gimnasio desde Supabase
+
+Problema que evita:
+
+- Crear un usuario en Supabase Auth que despues no ve ningun gimnasio.
+- Insertar solo `tenants` y dejar la cuenta sin licencia, owner, cuentas contables o planes base.
+- Usar el formulario del programa cuando el alta debe hacerse manualmente desde Supabase.
+
+Regla:
+
+El usuario dueno se crea primero en Supabase Auth. La cuenta del gimnasio se crea despues desde SQL Editor con la funcion interna `app_private.create_gym_account_from_supabase`. Esta funcion no debe exponerse al frontend ni concederse a `anon` o `authenticated`.
+
+Guia completa:
+
+```text
+docs/supabase/CREATE_GYM_ACCOUNT_FROM_SUPABASE.md
+```
+
+Pasos estandar:
+
+1. Verificar que se esta trabajando en el proyecto correcto.
+
+```text
+vuebqjashgcoexpihmko
+```
+
+2. Crear el usuario en Supabase Dashboard.
+
+```text
+Authentication > Users > Add user / Invite user
+```
+
+3. Confirmar el usuario en SQL Editor.
+
+```sql
+select id, email, created_at, email_confirmed_at
+from auth.users
+where lower(email) = lower('dueno@gimnasio.com');
+```
+
+4. Crear el gimnasio.
+
+```sql
+select *
+from app_private.create_gym_account_from_supabase(
+  p_owner_email := 'dueno@gimnasio.com',
+  p_gym_name := 'Nombre del Gimnasio',
+  p_slug := 'nombre-del-gimnasio',
+  p_license_type := 'annual',
+  p_license_status := 'active',
+  p_seats := 1
+);
+```
+
+5. Verificar que existan `tenants`, `tenant_memberships` y `licenses` para el slug creado.
+
 ## Flujo: Preparar un commit
 
 Pasos estandar:

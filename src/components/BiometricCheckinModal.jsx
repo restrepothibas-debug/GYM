@@ -3,6 +3,7 @@ import { CheckCircle, Fingerprint, Loader2, Search, Settings, X } from 'lucide-r
 import { GymContext } from '../context/GymContext';
 import { useUi } from '../context/UiContext';
 import { getTodayDateString } from '../lib/dateUtils';
+import { ATTENDANCE_COPY } from '../lib/uiLabels';
 
 function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
   const {
@@ -36,7 +37,7 @@ function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
     const result = await identifyMemberByBiometric();
     if (!result.ok) {
       setScanState('error');
-      setError(result.error || 'No se encontro un socio con esa huella.');
+      setError(result.error || 'No se encontró un atleta con esa huella.');
       return;
     }
 
@@ -53,8 +54,8 @@ function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
 
     if (alreadyCheckedIn) {
       notify({
-        title: 'Asistencia existente',
-        message: `${matchedMember.name} ya registró entrada hoy.`,
+        title: ATTENDANCE_COPY.existingTitle,
+        message: ATTENDANCE_COPY.existingMessage(matchedMember.name),
         tone: 'info',
       });
       onClose();
@@ -64,8 +65,8 @@ function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
     const saved = await addCheckin(matchedMember.id);
     if (saved) {
       notify({
-        title: 'Entrada registrada',
-        message: `${matchedMember.name} ingresó por huella.`,
+        title: ATTENDANCE_COPY.savedTitle,
+        message: ATTENDANCE_COPY.savedMessage(matchedMember.name),
         tone: 'success',
       });
       onCheckinFeedback?.(matchedMember);
@@ -87,7 +88,7 @@ function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
               <Fingerprint className="w-4 h-4" aria-hidden="true" />
             </span>
             <div>
-              <h2 id={titleId}>Ingreso por huella</h2>
+              <h2 id={titleId}>{ATTENDANCE_COPY.biometricTitle}</h2>
               <p>Proveedor activo: {biometricProvider}</p>
             </div>
           </div>
@@ -150,7 +151,7 @@ function BiometricCheckinModal({ onCheckinFeedback, onClose, onOpenSettings }) {
               disabled={!matchedMember}
               className="app-primary-action app-biometric-submit"
             >
-              Registrar entrada
+              {ATTENDANCE_COPY.action}
             </button>
           </div>
         </div>

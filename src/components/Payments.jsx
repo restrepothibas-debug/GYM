@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { Trash2, ArrowDownLeft, ArrowUpRight, PlusCircle } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
 import { useUi } from '../context/UiContext';
+import { PAYMENT_COPY } from '../lib/uiLabels';
 
 function Payments() {
   const { cashFlow, clearCashFlow, isRemoteEnabled, recordCashMovement } = useContext(GymContext);
@@ -64,7 +65,6 @@ function Payments() {
         )}
       </div>
 
-      {/* Resumen rápido */}
       <div className="payments-summary grid grid-cols-2 gap-2">
         <div className="bg-emerald-950/30 border border-emerald-500/20 p-3 rounded-xl">
           <span className="text-[8px] text-emerald-400 font-bold block uppercase tracking-wider">Total Ingresos</span>
@@ -124,7 +124,7 @@ function Payments() {
             className="app-primary-action h-10 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-[10px] font-black flex items-center gap-1.5"
           >
             <PlusCircle className="w-3.5 h-3.5" aria-hidden="true" />
-            {saving ? 'Guardando…' : 'Registrar'}
+            {saving ? PAYMENT_COPY.saving : PAYMENT_COPY.action}
           </button>
         </div>
       </form>

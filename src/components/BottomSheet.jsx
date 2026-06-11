@@ -1,10 +1,20 @@
 import { useState, useContext, useEffect, useId, useRef } from 'react';
-import { X, Check, Wallet, Trash2, Plus, Fingerprint } from 'lucide-react';
+import { X, Check, Wallet, Trash2, Plus, Fingerprint, ChevronDown, Package } from 'lucide-react';
 import { GymContext } from '../context/GymContext';
 import { useUi } from '../context/UiContext';
 import { formatCurrency, getMemberDebtBreakdown, PRODUCT_PAYMENT_METHOD_LABELS } from '../lib/accounting';
 import { formatMembershipStatus, getTodayDateFormatted, getTodayDateString } from '../lib/dateUtils';
 import { DEFAULT_MEMBERSHIP_PLANS, getActiveMembershipPlans } from '../lib/membershipPlans';
+import {
+  ATHLETE_COPY,
+  ATTENDANCE_COPY,
+  BIOMETRIC_COPY,
+  MEMBERSHIP_ADJUSTMENT_COPY,
+  PAYMENT_COPY,
+  PRODUCT_COPY,
+} from '../lib/uiLabels';
+
+const PAYMENT_QUICK_AMOUNTS = [5000, 20000, 50000];
 
 function BottomSheet({ memberId, onClose }) {
   const { confirm, notify } = useUi();
@@ -32,10 +42,18 @@ function BottomSheet({ memberId, onClose }) {
   const [paymentTarget, setPaymentTarget] = useState('auto');
   const [dayAdjustment, setDayAdjustment] = useState('');
   const [dayAdjustmentReason, setDayAdjustmentReason] = useState('');
+  const [isBiometricOpen, setIsBiometricOpen] = useState(false);
+  const [isMembershipAdjustmentOpen, setIsMembershipAdjustmentOpen] = useState(false);
   const [manualDate, setManualDate] = useState(getTodayDateString());
   const [productPayMethod, setProductPayMethod] = useState('credito');
+  const [pendingProductId, setPendingProductId] = useState(null);
   const panelTitleId = useId();
+  const manualDateId = useId();
+  const paymentAmountId = useId();
+  const dayAdjustmentId = useId();
+  const dayAdjustmentReasonId = useId();
   const closeButtonRef = useRef(null);
+  const pendingProductIdRef = useRef(null);
 
   const member = initialMember;
 
@@ -122,7 +140,7 @@ function BottomSheet({ memberId, onClose }) {
     });
   };
 
-  // ── Registrar pago / abono ──
+  // ── Registrar Pago / Abono ──
   const handlePayment = async () => {
     const amount = parseFloat(paymentAmount);
     if (!amount || amount <= 0) return;
@@ -150,22 +168,30 @@ function BottomSheet({ memberId, onClose }) {
 
   // ── Vender producto desde el panel ──
   const handleSellProduct = async (productId) => {
-    await sellProduct(productId, memberId, productPayMethod);
+    if (pendingProductIdRef.current) return;
+    pendingProductIdRef.current = productId;
+    setPendingProductId(productId);
+    try {
+      await sellProduct(productId, memberId, productPayMethod);
+    } finally {
+      pendingProductIdRef.current = null;
+      setPendingProductId(null);
+    }
   };
 
-  // ── Eliminar usuario activo ──
+  // ── Eliminar atleta activo ──
   const handleDelete = async () => {
     const confirmed = await confirm({
-      title: 'Eliminar usuario activo',
-      message: `¿Eliminar a ${member.name} de los usuarios activos? Su historial contable, compras y asistencias se conserva.`,
-      confirmLabel: 'Eliminar usuario',
+      title: ATHLETE_COPY.deleteConfirmTitle,
+      message: `¿Eliminar a ${member.name} de los atletas activos? Su historial contable, compras y asistencias se conserva.`,
+      confirmLabel: ATHLETE_COPY.deleteAction,
     });
     if (confirmed) {
       const removed = await deleteMember(memberId);
       if (removed) {
         notify({
-          title: 'Usuario eliminado',
-          message: `${member.name} ya no aparece en usuarios activos.`,
+          title: ATHLETE_COPY.deleteSuccessTitle,
+          message: `${member.name} ya no aparece en atletas activos.`,
           tone: 'success',
         });
         onClose();
@@ -194,7 +220,7 @@ function BottomSheet({ memberId, onClose }) {
             ref={closeButtonRef}
             onClick={onClose}
             className="app-icon-button w-8 h-8 bg-slate-950 rounded-full flex items-center justify-center text-slate-400 hover:text-white shrink-0"
-            aria-label="Cerrar panel del socio"
+            aria-label={ATHLETE_COPY.panelCloseLabel}
           >
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -204,7 +230,7 @@ function BottomSheet({ memberId, onClose }) {
             The total debt card below combines both sources for operational clarity. */}
         <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
           <div>
-            <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Saldo Membresia</span>
+            <span className="text-[8px] text-slate-500 font-bold block uppercase tracking-wider">Saldo Membresía</span>
             <span className={`text-sm font-black ${member.balance < 0 ? 'text-rose-400' : member.balance > 0 ? 'text-emerald-400' : 'text-slate-300'}`}>
               {member.balance < 0 ? `-$${Math.abs(member.balance).toLocaleString()}` : `$${member.balance.toLocaleString()}`}
             </span>
@@ -222,22 +248,22 @@ function BottomSheet({ memberId, onClose }) {
           <div className="flex items-center justify-between">
             <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Detalle de Deuda</span>
             <span className={`text-xs font-black ${debtBreakdown.totalDebt > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {debtBreakdown.totalDebt > 0 ? formatCurrency(debtBreakdown.totalDebt) : 'Al dia'}
+              {debtBreakdown.totalDebt > 0 ? formatCurrency(debtBreakdown.totalDebt) : 'Al día'}
             </span>
           </div>
           {debtBreakdown.totalDebt === 0 ? (
-            <p className="text-[10px] text-slate-500">Sin deudas de membresia ni productos a credito.</p>
+            <p className="text-[10px] text-slate-500">Sin deudas de membresía ni productos a crédito.</p>
           ) : (
             <div className="space-y-1.5">
               {debtBreakdown.membershipDebt > 0 && (
                 <div className="flex items-center justify-between gap-3 text-[10px]">
-                  <span className="text-slate-400">Membresia / plan pendiente</span>
+                  <span className="text-slate-400">Membresía / plan pendiente</span>
                   <strong className="text-rose-400 shrink-0">{formatCurrency(debtBreakdown.membershipDebt)}</strong>
                 </div>
               )}
               {debtBreakdown.productItems.map((product, index) => (
                 <div key={`${product.name}-${product.date || 'producto'}-${index}`} className="flex items-center justify-between gap-3 text-[10px]">
-                  <span className="text-slate-400 truncate">Producto a credito: {product.name}</span>
+                  <span className="text-slate-400 truncate">Producto a crédito: {product.name}</span>
                   <strong className="text-rose-400 shrink-0">{formatCurrency(product.due)}</strong>
                 </div>
               ))}
@@ -248,7 +274,7 @@ function BottomSheet({ memberId, onClose }) {
         {/* ── Asistencia ── */}
         <div className="space-y-2 bg-slate-950 border border-slate-800 rounded-xl p-3">
           <div className="flex items-center justify-between">
-            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Registro de Asistencia</span>
+            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">{ATTENDANCE_COPY.sectionTitle}</span>
             <span className="text-[8px] text-slate-500 font-bold">Hoy: {getTodayDateFormatted()}</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -263,13 +289,17 @@ function BottomSheet({ memberId, onClose }) {
               }`}
             >
               <Check className="w-4 h-4" aria-hidden="true" />
-              {alreadyCheckedIn ? 'Ya registrado' : 'Asistir Hoy (1-Clic)'}
+              {alreadyCheckedIn ? ATTENDANCE_COPY.registered : ATTENDANCE_COPY.action}
             </button>
             <div className="flex border border-slate-800 rounded-lg overflow-hidden bg-slate-900">
               <input
+                id={manualDateId}
+                name="manualCheckinDate"
                 type="date"
                 value={manualDate}
                 onChange={e => setManualDate(e.target.value)}
+                aria-label="Fecha para registrar asistencia"
+                autoComplete="off"
                 className="bg-transparent text-slate-200 text-[10px] px-2 py-1 focus:outline-none w-full cursor-pointer"
               />
               <button
@@ -277,7 +307,7 @@ function BottomSheet({ memberId, onClose }) {
                 onClick={handleManualCheckin}
                 className="px-2.5 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold border-l border-slate-700 active:scale-95 transition-all"
               >
-                Añadir
+                {ATTENDANCE_COPY.manualAction}
               </button>
             </div>
           </div>
@@ -294,56 +324,20 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
-        <div className="member-biometric-card">
-          <div className="member-biometric-card__header">
-            <span className="member-biometric-card__title">
-              <Fingerprint className="w-3.5 h-3.5" aria-hidden="true" />
-              Huella digital
-            </span>
-            <span className={`member-biometric-card__status ${biometricEnrollment ? 'member-biometric-card__status--active' : ''}`}>
-              {biometricEnrollment ? 'Activa' : 'Sin registro'}
-            </span>
-          </div>
-          <div className="member-biometric-card__actions">
-            <button
-              type="button"
-              onClick={handleEnrollBiometric}
-              className="app-button app-button--secondary"
-            >
-              {biometricEnrollment ? 'Reenrolar' : 'Enrolar'}
-            </button>
-            <button
-              type="button"
-              onClick={handleVerifyBiometric}
-              disabled={!biometricEnrollment}
-              className="app-button app-button--secondary"
-            >
-              Verificar
-            </button>
-            <button
-              type="button"
-              onClick={handleRevokeBiometric}
-              disabled={!biometricEnrollment}
-              className="app-button app-button--secondary app-button--biometric-danger"
-            >
-              Revocar
-            </button>
-          </div>
-        </div>
-
         {/* ── Liquidar / Abonar ── */}
         <div className="member-payment-card">
           <div className="flex justify-between items-center">
-            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">Registrar pago</span>
+            <span className="text-[8px] text-indigo-400 font-black uppercase tracking-widest">{PAYMENT_COPY.action}</span>
             <span className={`text-[9px] font-bold ${debtBreakdown.totalDebt > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
               {debtBreakdown.totalDebt > 0 ? `Debe ${formatCurrency(debtBreakdown.totalDebt)}` : 'Al día'}
             </span>
           </div>
+          <span className="member-section-label">{PAYMENT_COPY.targetLabel}</span>
           <div className="member-payment-targets" role="radiogroup" aria-label="Destino del pago">
             {[
-              { key: 'auto', label: 'Auto', detail: 'Membresia y productos' },
-              { key: 'membership', label: 'Membresia', detail: formatCurrency(debtBreakdown.membershipDebt) },
-              { key: 'products', label: 'Productos', detail: formatCurrency(debtBreakdown.productDebt) },
+              { key: 'auto', label: 'Automático', detail: `Deuda total ${formatCurrency(debtBreakdown.totalDebt)}` },
+              { key: 'membership', label: 'Membresía', detail: `Plan ${formatCurrency(debtBreakdown.membershipDebt)}` },
+              { key: 'products', label: 'Productos', detail: `Tienda ${formatCurrency(debtBreakdown.productDebt)}` },
             ].map(option => (
               <label key={option.key} className={`member-payment-target ${paymentTarget === option.key ? 'member-payment-target--selected' : ''}`}>
                 <input
@@ -362,10 +356,15 @@ function BottomSheet({ memberId, onClose }) {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <span className="text-slate-400 block text-[9px] mb-1">Total a Pagar / Abonar:</span>
+              <label htmlFor={paymentAmountId} className="text-slate-400 block text-[9px] mb-1">{PAYMENT_COPY.amountLabel}</label>
               <input
+                id={paymentAmountId}
+                name="paymentAmount"
                 type="number"
-                placeholder="Monto $"
+                inputMode="numeric"
+                min="1"
+                autoComplete="off"
+                placeholder="Monto…"
                 value={paymentAmount}
                 onChange={e => setPaymentAmount(e.target.value)}
                 className="w-full h-8 px-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -376,16 +375,76 @@ function BottomSheet({ memberId, onClose }) {
               onClick={handlePayment}
               className="app-control h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-lg flex items-center gap-1.5 active:scale-95 transition-all shadow-lg shadow-emerald-600/20"
             >
-              <Wallet className="w-4 h-4" aria-hidden="true" />Registrar
+              <Wallet className="w-4 h-4" aria-hidden="true" />{PAYMENT_COPY.action}
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            {[5000, 20000, 50000].map(v => (
-              <button key={v} type="button" onClick={() => setPaymentAmount(String((parseFloat(paymentAmount) || 0) + v))}
-                className="app-control h-8 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 font-extrabold text-[10px] rounded-lg active:scale-95 transition-all">
-                + ${v.toLocaleString()}
-              </button>
+          <div className="member-payment-quick">
+            <span>{PAYMENT_COPY.quickAmountsTitle}</span>
+            <div>
+              {PAYMENT_QUICK_AMOUNTS.map(amount => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setPaymentAmount(String((parseFloat(paymentAmount) || 0) + amount))}
+                  className="app-control member-payment-quick__button"
+                >
+                  Sumar {formatCurrency(amount)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Productos del Atleta ── */}
+        <div className="member-products-card">
+          <div className="member-products-card__header">
+            <span className="member-section-title">
+              <Package className="w-3.5 h-3.5" aria-hidden="true" />
+              {PRODUCT_COPY.title}
+            </span>
+            <span className="member-section-meta">{products.length} en tienda</span>
+          </div>
+          <span className="member-section-label">{PRODUCT_COPY.paymentMethodLabel}</span>
+          <div className="member-product-methods" role="radiogroup" aria-label={PRODUCT_COPY.paymentMethodLabel}>
+            {[
+              { key: 'credito', label: 'Crédito' },
+              { key: 'efectivo', label: 'Efectivo' },
+              { key: 'tarjeta', label: 'Tarjeta' },
+            ].map(option => (
+              <label key={option.key} className={`member-product-method ${productPayMethod === option.key ? 'member-product-method--selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="productPayMethod"
+                  value={option.key}
+                  checked={productPayMethod === option.key}
+                  onChange={() => setProductPayMethod(option.key)}
+                />
+                <span>{option.label}</span>
+              </label>
             ))}
+          </div>
+          <div className="member-product-grid">
+            {products.length === 0
+              ? <p className="member-products-empty">{PRODUCT_COPY.empty}</p>
+              : products.map(product => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => handleSellProduct(product.id)}
+                    disabled={product.stock === 0 || pendingProductId === product.id}
+                    className="member-product-button"
+                  >
+                    <span className="member-product-button__content">
+                      <strong className="member-product-button__name">{product.name}</strong>
+                      <small className="member-product-button__meta">{formatCurrency(product.price)} · Stock {product.stock}</small>
+                    </span>
+                    <em className="member-product-button__action">
+                      <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                      {pendingProductId === product.id ? 'Asignando…' : PRODUCT_COPY.assignAction}
+                    </em>
+                  </button>
+                ))
+            }
           </div>
         </div>
 
@@ -403,35 +462,108 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
+        <div className="member-biometric-card">
+          <button
+            type="button"
+            className="member-disclosure"
+            onClick={() => setIsBiometricOpen(open => !open)}
+            aria-expanded={isBiometricOpen}
+          >
+            <span className="member-section-title">
+              <Fingerprint className="w-3.5 h-3.5" aria-hidden="true" />
+              {BIOMETRIC_COPY.title}
+            </span>
+            <span className="member-disclosure__side">
+              <span className={`member-biometric-card__status ${biometricEnrollment ? 'member-biometric-card__status--active' : ''}`}>
+                {biometricEnrollment ? 'Activa' : 'Sin registro'}
+              </span>
+              <span>{isBiometricOpen ? BIOMETRIC_COPY.collapse : BIOMETRIC_COPY.expand}</span>
+              <ChevronDown className={`w-4 h-4 ${isBiometricOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </span>
+          </button>
+          {isBiometricOpen && (
+            <div className="member-biometric-card__actions">
+              <button
+                type="button"
+                onClick={handleEnrollBiometric}
+                className="app-button app-button--secondary"
+              >
+                {biometricEnrollment ? 'Reenrolar' : 'Enrolar'}
+              </button>
+              <button
+                type="button"
+                onClick={handleVerifyBiometric}
+                disabled={!biometricEnrollment}
+                className="app-button app-button--secondary"
+              >
+                Verificar
+              </button>
+              <button
+                type="button"
+                onClick={handleRevokeBiometric}
+                disabled={!biometricEnrollment}
+                className="app-button app-button--secondary app-button--biometric-danger"
+              >
+                Revocar
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="member-adjustment-card">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Ajuste auditado de días</span>
-            <span className="text-[8px] text-slate-500 font-bold">Actual: {member.expiryDate}</span>
-          </div>
-          <div className="member-adjustment-row">
-            <input
-              type="number"
-              value={dayAdjustment}
-              onChange={event => setDayAdjustment(event.target.value)}
-              placeholder="+7 / -1"
-              className="member-adjustment-days"
-            />
-            <input
-              type="text"
-              value={dayAdjustmentReason}
-              onChange={event => setDayAdjustmentReason(event.target.value)}
-              placeholder="Motivo operativo"
-              className="member-adjustment-reason"
-            />
-            <button
-              type="button"
-              onClick={handleAdjustDays}
-              disabled={!dayAdjustment}
-              className="app-button app-button--secondary member-adjustment-save"
-            >
-              Ajustar
-            </button>
-          </div>
+          <button
+            type="button"
+            className="member-disclosure"
+            onClick={() => setIsMembershipAdjustmentOpen(open => !open)}
+            aria-expanded={isMembershipAdjustmentOpen}
+          >
+            <span>
+              <span className="member-section-title">{MEMBERSHIP_ADJUSTMENT_COPY.title}</span>
+              <small>Actual: {member.expiryDate}</small>
+            </span>
+            <span className="member-disclosure__side">
+              <span>{isMembershipAdjustmentOpen ? MEMBERSHIP_ADJUSTMENT_COPY.collapse : MEMBERSHIP_ADJUSTMENT_COPY.expand}</span>
+              <ChevronDown className={`w-4 h-4 ${isMembershipAdjustmentOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </span>
+          </button>
+          {isMembershipAdjustmentOpen && (
+            <div className="member-adjustment-row">
+              <label htmlFor={dayAdjustmentId} className="member-adjustment-field">
+                <span>{MEMBERSHIP_ADJUSTMENT_COPY.daysLabel}</span>
+                <input
+                  id={dayAdjustmentId}
+                  name="membershipDayAdjustment"
+                  type="number"
+                  value={dayAdjustment}
+                  onChange={event => setDayAdjustment(event.target.value)}
+                  placeholder="+7 / -1…"
+                  autoComplete="off"
+                  className="member-adjustment-days"
+                />
+              </label>
+              <label htmlFor={dayAdjustmentReasonId} className="member-adjustment-field">
+                <span>{MEMBERSHIP_ADJUSTMENT_COPY.reasonLabel}</span>
+                <input
+                  id={dayAdjustmentReasonId}
+                  name="membershipAdjustmentReason"
+                  type="text"
+                  value={dayAdjustmentReason}
+                  onChange={event => setDayAdjustmentReason(event.target.value)}
+                  placeholder="Motivo operativo…"
+                  autoComplete="off"
+                  className="member-adjustment-reason"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleAdjustDays}
+                disabled={!dayAdjustment}
+                className="app-button app-button--secondary member-adjustment-save"
+              >
+                {MEMBERSHIP_ADJUSTMENT_COPY.action}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="member-history-section">
@@ -481,44 +613,10 @@ function BottomSheet({ memberId, onClose }) {
           </div>
         </div>
 
-        {/* ── Productos del Socio ── */}
-        <div className="space-y-2">
-          <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest block">Producto al Socio</span>
-          <div className="grid grid-cols-3 gap-2 mb-2">
-            <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
-              <input type="radio" name="ppm" value="credito" checked={productPayMethod === 'credito'} onChange={() => setProductPayMethod('credito')} className="accent-indigo-500" />
-              <span className="text-[10px] font-bold text-slate-300">Credito</span>
-            </label>
-            <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
-              <input type="radio" name="ppm" value="efectivo" checked={productPayMethod === 'efectivo'} onChange={() => setProductPayMethod('efectivo')} className="accent-indigo-500" />
-              <span className="text-[10px] font-bold text-slate-300">Efectivo</span>
-            </label>
-            <label className="flex items-center gap-2 p-2 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer">
-              <input type="radio" name="ppm" value="tarjeta" checked={productPayMethod === 'tarjeta'} onChange={() => setProductPayMethod('tarjeta')} className="accent-indigo-500" />
-              <span className="text-[10px] font-bold text-slate-300">Tarjeta</span>
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {products.length === 0
-              ? <p className="col-span-2 text-[9px] text-slate-500">Sin productos en tienda.</p>
-              : products.map(p => (
-                  <button key={p.id} type="button" onClick={() => handleSellProduct(p.id)} disabled={p.stock === 0}
-                    className="p-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between gap-2 text-left transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
-                    <div className="truncate">
-                      <p className="text-[10px] font-bold text-slate-200 truncate">{p.name}</p>
-                      <p className="text-[9px] text-indigo-400 font-black">${p.price.toLocaleString()}</p>
-                    </div>
-                    <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                  </button>
-                ))
-            }
-          </div>
-        </div>
-
-        {/* ── Eliminar usuario ── */}
+        {/* ── Eliminar atleta ── */}
         <button type="button" onClick={handleDelete}
           className="w-full h-10 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-          <Trash2 className="w-4 h-4" aria-hidden="true" /> Eliminar usuario
+          <Trash2 className="w-4 h-4" aria-hidden="true" /> {ATHLETE_COPY.deleteAction}
         </button>
 
       </div>

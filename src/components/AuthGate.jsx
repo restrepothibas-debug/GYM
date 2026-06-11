@@ -81,7 +81,7 @@ function AuthGate() {
             {workspaceLoading ? (
               <div className="py-8 flex flex-col items-center gap-3 text-slate-400">
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
-                <p className="text-xs font-bold">Cargando cuenta...</p>
+                <p className="text-xs font-bold">Cargando cuenta…</p>
               </div>
             ) : (
               <>
@@ -128,7 +128,7 @@ function AuthGate() {
                   disabled={busy || !computedSlug}
                   className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all"
                 >
-                  {busy ? 'Creando...' : 'Crear cuenta'}
+                  {busy ? 'Creando…' : 'Crear cuenta'}
                 </button>
               </>
             )}
@@ -146,7 +146,7 @@ function AuthGate() {
             <Dumbbell className="w-5 h-5 text-white" />
           </span>
           <div>
-            <p className="text-sm font-black text-white">GYM-FLOW</p>
+            <p className="text-sm font-black text-white">Syncro-Gym</p>
             <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Acceso seguro</p>
           </div>
         </div>
@@ -215,7 +215,7 @@ function AuthGate() {
             disabled={busy}
             className="w-full h-11 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-lg text-xs shadow-lg shadow-indigo-600/10 active:scale-95 transition-all"
           >
-            {busy ? 'Procesando...' : mode === 'signin' ? 'Ingresar' : 'Crear usuario'}
+            {busy ? 'Procesando…' : mode === 'signin' ? 'Ingresar' : 'Crear cuenta'}
           </button>
         </form>
       </div>

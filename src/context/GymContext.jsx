@@ -17,6 +17,7 @@ const LOCAL_MEMBERSHIP_PLANS_KEY = 'gym_membership_plans';
 const LOCAL_BIOMETRICS_KEY = 'gym_member_biometrics';
 const BIOMETRIC_PROVIDER_KEY = 'gym_biometric_provider';
 const REMOTE_REQUEST_TIMEOUT_MS = 15000;
+const BUTTON_REPEAT_GUARD_MS = 1200;
 const ENABLE_REMOTE_SUPABASE = import.meta.env.MODE !== 'test' && hasSupabaseConfig;
 const USE_SEED_DATA = import.meta.env.MODE !== 'test';
 const LOCAL_MEMBER_FALLBACK = USE_SEED_DATA ? DEFAULT_MEMBERS : [];
@@ -71,7 +72,7 @@ const BIOMETRIC_METADATA_SELECT = [
 ].join(',');
 const DEFAULT_LOCAL_TENANT = {
   id: LOCAL_TENANT_ID,
-  name: 'GYM-FLOW',
+  name: 'Gimnasio local',
   slug: LOCAL_TENANT_ID,
   status: 'active',
   created_at: null,
@@ -419,6 +420,25 @@ function createClientId(prefix) {
   return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function getCheckinKey(memberId, date) {
+  return `${memberId}:${date || getTodayDateString()}`;
+}
+
+function collectKnownCheckinKeys(members = [], checkins = []) {
+  const keys = new Set();
+
+  checkins.forEach(checkin => {
+    if (checkin.memberId && checkin.date) keys.add(getCheckinKey(checkin.memberId, checkin.date));
+  });
+
+  members.forEach(member => {
+    const attendance = Array.isArray(member.attendance) ? member.attendance : [];
+    attendance.forEach(date => keys.add(getCheckinKey(member.id, date)));
+  });
+
+  return keys;
+}
+
 export function GymProvider({ children }) {
   const isRemoteEnabled = ENABLE_REMOTE_SUPABASE;
   const [localTenant, setLocalTenant] = useState(() => (
@@ -466,9 +486,20 @@ export function GymProvider({ children }) {
   const [tenantIdentitySchemaReady, setTenantIdentitySchemaReady] = useState(!isRemoteEnabled);
   const sessionUserId = session?.user?.id || null;
   const workspaceLoadRef = useRef(0);
+  const membersRef = useRef(members);
+  const productsRef = useRef(products);
+  const checkinsTodayRef = useRef(checkinsToday);
+  const knownCheckinKeysRef = useRef(collectKnownCheckinKeys(members, checkinsToday));
+  const pendingCheckinKeysRef = useRef(new Set());
+  const pendingProductSaleKeysRef = useRef(new Set());
+  const recentProductSaleKeysRef = useRef(new Map());
 
   const resetRemoteState = useCallback(() => {
     workspaceLoadRef.current += 1;
+    pendingCheckinKeysRef.current.clear();
+    pendingProductSaleKeysRef.current.clear();
+    recentProductSaleKeysRef.current.clear();
+    knownCheckinKeysRef.current.clear();
     setWorkspaceLoading(false);
     setWorkspaceLoaded(false);
     setDataLoading(false);
@@ -487,11 +518,14 @@ export function GymProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    membersRef.current = members;
+    knownCheckinKeysRef.current = collectKnownCheckinKeys(members, checkinsTodayRef.current);
     if (isRemoteEnabled) return;
     writeStorageArray('gym_members', members);
   }, [isRemoteEnabled, members]);
 
   useEffect(() => {
+    productsRef.current = products;
     if (isRemoteEnabled) return;
     writeStorageArray('gym_products', products);
   }, [isRemoteEnabled, products]);
@@ -507,6 +541,8 @@ export function GymProvider({ children }) {
   }, [cashFlow, isRemoteEnabled]);
 
   useEffect(() => {
+    checkinsTodayRef.current = checkinsToday;
+    knownCheckinKeysRef.current = collectKnownCheckinKeys(membersRef.current, checkinsToday);
     if (isRemoteEnabled) return;
     writeStorageArray('gym_checkins', checkinsToday);
   }, [checkinsToday, isRemoteEnabled]);
@@ -854,7 +890,7 @@ export function GymProvider({ children }) {
             emailRedirectTo: window.location.origin,
           },
         }),
-        'Crear usuario'
+        'Crear cuenta'
       );
       if (authError) setError(getErrorMessage(authError));
       if (data?.session) {
@@ -1082,6 +1118,104 @@ export function GymProvider({ children }) {
       return true;
     })();
   }, [activeTenantId, isRemoteEnabled, loadTenantData]);
+
+  const deleteMembershipPlan = useCallback((planOrId) => {
+    const knownPlan = typeof planOrId === 'object'
+      ? planOrId
+      : membershipPlans.find(plan => plan.id === planOrId || plan.planKey === planOrId);
+    const planId = knownPlan?.id || (typeof planOrId === 'object' ? '' : planOrId);
+    const planKey = knownPlan?.planKey || (typeof planOrId === 'object' ? '' : planOrId);
+    const planInUseMessage = 'Este plan ya tiene socios o historial. Aunque este desactivado, debe conservarse para la auditoria.';
+
+    if (!planId && !planKey) return { ok: false, error: 'No se encontro el plan.' };
+
+    if (membershipPlans.length <= 1) {
+      const message = 'Debe quedar al menos un plan en el catalogo.';
+      setError(message);
+      return { ok: false, error: message };
+    }
+
+    if (!isRemoteEnabled) {
+      const planIsInUse = members.some(member => member.plan === planKey) ||
+        membershipEvents.some(event => event.planKey === planKey);
+
+      if (planIsInUse) {
+        setError(planInUseMessage);
+        return { ok: false, error: planInUseMessage };
+      }
+
+      setMembershipPlans(currentPlans => currentPlans.filter(plan => (
+        plan.id !== planId && plan.planKey !== planKey
+      )));
+      return { ok: true };
+    }
+
+    return (async () => {
+      if (!supabase || !activeTenantId) return { ok: false, error: 'No hay tenant activo para eliminar el plan.' };
+      setError('');
+
+      const [memberUsageResult, eventUsageResult] = await withRemoteTimeout(
+        Promise.all([
+          supabase
+            .from('members')
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', activeTenantId)
+            .eq('plan', planKey),
+          supabase
+            .from('member_membership_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('tenant_id', activeTenantId)
+            .eq('plan_key', planKey),
+        ]),
+        'Verificar uso del plan'
+      );
+
+      const usageError = memberUsageResult.error || eventUsageResult.error;
+      if (usageError) {
+        const message = getErrorMessage(usageError);
+        setError(message);
+        return { ok: false, error: message };
+      }
+
+      if ((memberUsageResult.count || 0) > 0 || (eventUsageResult.count || 0) > 0) {
+        setError(planInUseMessage);
+        return { ok: false, error: planInUseMessage };
+      }
+
+      let request = supabase
+        .from('membership_plans')
+        .delete()
+        .eq('tenant_id', activeTenantId);
+
+      request = planId
+        ? request.eq('id', planId)
+        : request.eq('plan_key', planKey);
+
+      const { data: deletedPlan, error: planError } = await request
+        .select('id,plan_key')
+        .maybeSingle();
+
+      if (planError) {
+        const message = planError.code === '23503'
+          ? planInUseMessage
+          : getErrorMessage(planError);
+        setError(message);
+        return { ok: false, error: message };
+      }
+
+      if (!deletedPlan) {
+        const message = 'No se elimino ningun plan. Aplica la migracion de permisos o confirma que el plan existe en Supabase.';
+        setError(message);
+        return { ok: false, error: message };
+      }
+
+      setMembershipPlans(currentPlans => currentPlans.filter(plan => (
+        plan.id !== deletedPlan.id && plan.planKey !== deletedPlan.plan_key
+      )));
+      await loadTenantData(activeTenantId);
+      return { ok: true };
+    })();
+  }, [activeTenantId, isRemoteEnabled, loadTenantData, members, membershipEvents, membershipPlans]);
 
   const getMemberBiometricEnrollment = useCallback((memberId) => (
     memberBiometrics.find(enrollment => (
@@ -1407,42 +1541,65 @@ export function GymProvider({ children }) {
   }, [activeTenantId, isRemoteEnabled, loadTenantData]);
 
   const addCheckin = useCallback((memberId, date = getTodayDateString()) => {
+    const todayStr = date || getTodayDateString();
+    const requestKey = getCheckinKey(memberId, todayStr);
+
+    if (!membersRef.current.some(member => member.id === memberId)) return false;
+    if (knownCheckinKeysRef.current.has(requestKey) || pendingCheckinKeysRef.current.has(requestKey)) {
+      return false;
+    }
+
+    pendingCheckinKeysRef.current.add(requestKey);
+
     if (!isRemoteEnabled) {
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const todayStr = date || getTodayDateString();
+      try {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      setCheckinsToday(prev => {
-        if (todayStr !== getTodayDateString()) return prev;
-        if (prev.some(c => c.memberId === memberId && c.date === todayStr)) return prev;
-        return [{ memberId, time, date: todayStr }, ...prev];
-      });
-
-      setMembers(prev => prev.map(m => {
-        const attendance = Array.isArray(m.attendance) ? m.attendance : [];
-        if (m.id === memberId && !attendance.includes(todayStr)) {
-          return { ...m, attendance: [todayStr, ...attendance] };
+        if (todayStr === getTodayDateString()) {
+          const nextCheckins = [{ memberId, time, date: todayStr }, ...checkinsTodayRef.current];
+          checkinsTodayRef.current = nextCheckins;
+          setCheckinsToday(nextCheckins);
         }
-        return m;
-      }));
-      return true;
+
+        const nextMembers = membersRef.current.map(member => {
+          const attendance = Array.isArray(member.attendance) ? member.attendance : [];
+          if (member.id === memberId && !attendance.includes(todayStr)) {
+            return { ...member, attendance: [todayStr, ...attendance] };
+          }
+          return member;
+        });
+        membersRef.current = nextMembers;
+        setMembers(nextMembers);
+        knownCheckinKeysRef.current.add(requestKey);
+        return true;
+      } finally {
+        pendingCheckinKeysRef.current.delete(requestKey);
+      }
     }
 
     return (async () => {
-      if (!supabase || !activeTenantId) return false;
-      setError('');
-      const { error: rpcError } = await supabase.rpc('record_checkin', {
-        p_tenant_id: activeTenantId,
-        p_member_id: memberId,
-        p_checkin_date: date || getTodayDateString(),
-      });
+      try {
+        if (!supabase || !activeTenantId) {
+          return false;
+        }
+        setError('');
+        const { error: rpcError } = await supabase.rpc('record_checkin', {
+          p_tenant_id: activeTenantId,
+          p_member_id: memberId,
+          p_checkin_date: todayStr,
+        });
 
-      if (rpcError) {
-        setError(getErrorMessage(rpcError));
-        return false;
+        if (rpcError) {
+          setError(getErrorMessage(rpcError));
+          return false;
+        }
+
+        knownCheckinKeysRef.current.add(requestKey);
+        await loadTenantData(activeTenantId);
+        return true;
+      } finally {
+        pendingCheckinKeysRef.current.delete(requestKey);
       }
-
-      await loadTenantData(activeTenantId);
-      return true;
     })();
   }, [activeTenantId, isRemoteEnabled, loadTenantData]);
 
@@ -1635,64 +1792,97 @@ export function GymProvider({ children }) {
   }, [activeTenantId, isRemoteEnabled, loadTenantData]);
 
   const sellProduct = useCallback((productId, memberId, paymentMethod) => {
+    const normalizedMethod = normalizeProductMethod(paymentMethod);
+    const requestKey = `${productId}:${memberId}:${normalizedMethod}`;
+    const now = Date.now();
+    const lastRequestAt = recentProductSaleKeysRef.current.get(requestKey) || 0;
+
+    if (
+      pendingProductSaleKeysRef.current.has(requestKey) ||
+      now - lastRequestAt < BUTTON_REPEAT_GUARD_MS
+    ) {
+      return false;
+    }
+
+    pendingProductSaleKeysRef.current.add(requestKey);
+    recentProductSaleKeysRef.current.set(requestKey, now);
+
     if (!isRemoteEnabled) {
-      const product = products.find(p => p.id === productId);
-      const member = members.find(m => m.id === memberId);
-      if (!product || !member || product.stock <= 0) return false;
-      const normalizedMethod = normalizeProductMethod(paymentMethod);
+      try {
+        const product = productsRef.current.find(p => p.id === productId);
+        const member = membersRef.current.find(m => m.id === memberId);
+        if (!product || !member || product.stock <= 0) {
+          recentProductSaleKeysRef.current.delete(requestKey);
+          return false;
+        }
 
-      setProducts(prev => prev.map(p => (
-        p.id === productId ? { ...p, stock: p.stock - 1 } : p
-      )));
+        const nextProducts = productsRef.current.map(p => (
+          p.id === productId ? { ...p, stock: p.stock - 1 } : p
+        ));
+        productsRef.current = nextProducts;
+        setProducts(nextProducts);
 
-      setMembers(prev => prev.map(m => {
-        if (m.id !== memberId) return m;
-        const memberProducts = Array.isArray(m.products) ? m.products : [];
-        const soldItem = {
-          name: product.name,
-          price: product.price,
-          saleTotal: product.price,
-          amountPaid: ['efectivo', 'tarjeta'].includes(normalizedMethod) ? product.price : 0,
-          method: normalizedMethod,
-          status: ['efectivo', 'tarjeta'].includes(normalizedMethod) ? 'paid' : 'credit',
-          date: getTodayDateString(),
-        };
+        const nextMembers = membersRef.current.map(m => {
+          if (m.id !== memberId) return m;
+          const memberProducts = Array.isArray(m.products) ? m.products : [];
+          const soldItem = {
+            name: product.name,
+            price: product.price,
+            saleTotal: product.price,
+            amountPaid: ['efectivo', 'tarjeta'].includes(normalizedMethod) ? product.price : 0,
+            method: normalizedMethod,
+            status: ['efectivo', 'tarjeta'].includes(normalizedMethod) ? 'paid' : 'credit',
+            date: getTodayDateString(),
+          };
 
-        return {
-          ...m,
-          products: [...memberProducts, soldItem],
-        };
-      }));
+          return {
+            ...m,
+            products: [...memberProducts, soldItem],
+          };
+        });
+        membersRef.current = nextMembers;
+        setMembers(nextMembers);
 
-      // Product credit/sale is tracked in purchase history and stock movement.
-      // It never changes members.balance; only immediate cash/card payment enters cash flow.
-      if (['efectivo', 'tarjeta'].includes(normalizedMethod)) {
-        addCashFlowEntry('ingreso', product.price, `Venta directa de ${product.name} a ${member.name} (${normalizedMethod})`);
+        // Product credit/sale is tracked in purchase history and stock movement.
+        // It never changes members.balance; only immediate cash/card payment enters cash flow.
+        if (['efectivo', 'tarjeta'].includes(normalizedMethod)) {
+          addCashFlowEntry('ingreso', product.price, `Venta directa de ${product.name} a ${member.name} (${normalizedMethod})`);
+        }
+
+        return true;
+      } finally {
+        pendingProductSaleKeysRef.current.delete(requestKey);
       }
-
-      return true;
     }
 
     return (async () => {
-      if (!supabase || !activeTenantId) return false;
-      setError('');
-      const { error: rpcError } = await supabase.rpc('sell_product', {
-        p_tenant_id: activeTenantId,
-        p_member_id: memberId,
-        p_product_id: productId,
-        p_payment_method: paymentMethod,
-        p_quantity: 1,
-      });
+      try {
+        if (!supabase || !activeTenantId) {
+          recentProductSaleKeysRef.current.delete(requestKey);
+          return false;
+        }
+        setError('');
+        const { error: rpcError } = await supabase.rpc('sell_product', {
+          p_tenant_id: activeTenantId,
+          p_member_id: memberId,
+          p_product_id: productId,
+          p_payment_method: normalizedMethod,
+          p_quantity: 1,
+        });
 
-      if (rpcError) {
-        setError(getErrorMessage(rpcError));
-        return false;
+        if (rpcError) {
+          setError(getErrorMessage(rpcError));
+          recentProductSaleKeysRef.current.delete(requestKey);
+          return false;
+        }
+
+        await loadTenantData(activeTenantId);
+        return true;
+      } finally {
+        pendingProductSaleKeysRef.current.delete(requestKey);
       }
-
-      await loadTenantData(activeTenantId);
-      return true;
     })();
-  }, [activeTenantId, addCashFlowEntry, isRemoteEnabled, loadTenantData, members, products]);
+  }, [activeTenantId, addCashFlowEntry, isRemoteEnabled, loadTenantData]);
 
   const deleteMember = useCallback((memberId) => {
     if (!isRemoteEnabled) {
@@ -1783,6 +1973,7 @@ export function GymProvider({ children }) {
     createTenant,
     dataLoading,
     deactivateMembershipPlan,
+    deleteMembershipPlan,
     deleteMember,
     enrollMemberBiometric,
     error,
@@ -1839,6 +2030,7 @@ export function GymProvider({ children }) {
     createTenant,
     dataLoading,
     deactivateMembershipPlan,
+    deleteMembershipPlan,
     deleteMember,
     enrollMemberBiometric,
     error,

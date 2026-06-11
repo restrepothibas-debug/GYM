@@ -1,7 +1,7 @@
 export const PRODUCT_PAYMENT_METHOD_LABELS = {
-  credito: 'Credito',
-  asignado: 'Credito legado',
-  monedero: 'Credito legado',
+  credito: 'Crédito',
+  asignado: 'Crédito legado',
+  monedero: 'Crédito legado',
   efectivo: 'Efectivo',
   tarjeta: 'Tarjeta',
 };

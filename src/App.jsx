@@ -302,11 +302,11 @@ function App() {
             <button
               type="button"
               onClick={signOut}
-              className="h-9 px-3 text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black"
+              className="h-9 px-3 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all flex items-center gap-2 text-[10px] font-black rounded-lg border border-rose-500/20"
               aria-label="Cerrar sesión"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Salir</span>
+              <span>Salir</span>
             </button>
           )}
           <button

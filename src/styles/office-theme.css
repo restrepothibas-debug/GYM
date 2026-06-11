@@ -13,6 +13,13 @@
     var(--app-bg) !important;
   color: var(--app-text) !important;
   font-family: var(--font-ui);
+  font-size: 13px; /* Slightly smaller base font for more density */
+}
+
+@media (min-width: 64rem) {
+  [data-theme="office"] {
+    font-size: 14px;
+  }
 }
 
 [data-theme="office"] .bg-slate-950,
@@ -796,13 +803,11 @@
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  height: 100vh;
-  height: 100dvh;
   min-inline-size: 0;
   background-color: var(--app-bg);
   color: var(--app-text);
   overflow-x: hidden;
-  overflow-y: hidden;
+  overflow-y: auto; /* Changed from hidden to auto to ensure scrollability on all screens */
   -webkit-font-smoothing: antialiased;
 }
 

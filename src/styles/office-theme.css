@@ -801,7 +801,8 @@
   min-inline-size: 0;
   background-color: var(--app-bg);
   color: var(--app-text);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -2722,7 +2723,7 @@
   [data-theme="office"] .members-list,
   [data-theme="office"] .payments-list,
   [data-theme="office"] .store-grid {
-    max-block-size: min(64dvh, 44rem) !important;
+    max-block-size: min(78dvh, 52rem) !important;
   }
 
   [data-theme="office"] .member-panel-overlay {
@@ -2806,7 +2807,6 @@
     max-width: var(--app-content-max-desktop) !important;
     max-inline-size: var(--app-content-max-desktop);
     margin-inline: auto !important;
-    overflow: visible !important;
   }
 
   [data-theme="office"] .app-search {

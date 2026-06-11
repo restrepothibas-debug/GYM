@@ -55,14 +55,14 @@
    * Breakpoints stay in media queries because custom properties cannot be used
    * reliably as `@media` conditions across the current toolchain.
    */
-  --app-content-max-mobile: 28rem;
-  --app-content-max-tablet: 58rem;
-  --app-content-max-desktop: 92rem;
-  --app-content-max-wide: 108rem;
-  --app-shell-gap: clamp(0.75rem, 1.8vw, 1.5rem);
-  --app-shell-padding: clamp(1rem, 2.5vw, 2rem);
-  --app-nav-rail-width: clamp(5.5rem, 7vw, 7.5rem);
-  --app-panel-block-size: min(72dvh, 48rem);
+  --app-content-max-mobile: 24rem;
+  --app-content-max-tablet: 48rem;
+  --app-content-max-desktop: 72rem;
+  --app-content-max-wide: 84rem;
+  --app-shell-gap: 0.75rem;
+  --app-shell-padding: 1rem;
+  --app-nav-rail-width: 5rem;
+  --app-panel-block-size: min(85dvh, 52rem);
   --app-safe-bottom: max(env(safe-area-inset-bottom), 0rem);
 
   --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

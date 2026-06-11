@@ -2858,7 +2858,7 @@
   [data-theme="office"].app-shell {
     display: grid !important;
     grid-template-columns: var(--app-nav-rail-width) minmax(0, 1fr);
-    grid-template-rows: 4rem minmax(0, 1fr);
+    grid-template-rows: 3.25rem minmax(0, 1fr);
     grid-template-areas:
       "header header"
       "nav    main";
@@ -2875,9 +2875,10 @@
     position: sticky !important;
     top: 0 !important;
     z-index: 60 !important;
-    height: 4rem !important;
+    height: 3.25rem !important;
     background-color: var(--app-surface) !important;
     align-self: start;
+    border-bottom: 0.0625rem solid var(--app-border);
   }
 
   [data-theme="office"] .app-main {

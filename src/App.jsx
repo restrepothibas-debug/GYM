@@ -281,33 +281,6 @@ function App() {
     return <AuthGate />;
   }
 
-  if (isRemoteEnabled && activeTenant && !isLicenseUsable(activeLicense)) {
-    return (
-      <div data-theme="office" className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-2xl">
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-              <ShieldAlert className="w-5 h-5" />
-            </span>
-            <div>
-              <h1 className="text-sm font-black text-white">Licencia no activa</h1>
-              <p className="text-[10px] text-slate-500">{activeTenant.name}</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Estado actual: <strong className="text-rose-300">{activeLicense?.status || 'sin licencia'}</strong>
-          </p>
-          <button
-            onClick={signOut}
-            className="w-full h-10 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-xs font-black"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div data-theme="office" className="app-shell">
       <a href="#main-content" className="app-skip-link">Saltar al contenido</a>
@@ -325,6 +298,17 @@ function App() {
         </div>
 
         <div className="app-header-actions">
+          {isRemoteEnabled && (
+            <button
+              type="button"
+              onClick={signOut}
+              className="h-9 px-3 text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-[10px] font-black"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Salir</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setIsAddMemberModalOpen(true)}

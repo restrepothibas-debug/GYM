@@ -112,17 +112,6 @@ function AuthGate() {
                     placeholder="titanes-gym"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Licencia</label>
-                  <select
-                    value={licenseType}
-                    onChange={event => setLicenseType(event.target.value)}
-                    className="w-full h-11 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200"
-                  >
-                    <option value="annual">Suscripción anual</option>
-                    <option value="one_time">Pago único</option>
-                  </select>
-                </div>
                 <button
                   type="submit"
                   disabled={busy || !computedSlug}

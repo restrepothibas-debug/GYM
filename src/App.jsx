@@ -130,7 +130,7 @@ function SettingsView({
           actionLabel="Salir"
           icon={LogOut}
           title="Cerrar sesión"
-          detail={isRemoteEnabled ? "Cuenta remota activa" : "Modo local"}
+          detail={isRemoteEnabled ? "Cuenta remota activa" : "Sesión activa"}
           meta={activeTenant?.role ? `Rol: ${activeTenant.role}` : 'Sesion autenticada'}
           onClick={onSignOut}
           tone="danger"

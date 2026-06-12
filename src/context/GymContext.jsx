@@ -1560,25 +1560,55 @@ export function GymProvider({ children }) {
     if (!isRemoteEnabled) {
       try {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const today = getTodayDateString();
 
-        if (todayStr === getTodayDateString()) {
+        if (todayStr === today) {
           const nextCheckins = [{ memberId, time, date: todayStr }, ...checkinsTodayRef.current];
           checkinsTodayRef.current = nextCheckins;
           setCheckinsToday(nextCheckins);
         }
 
         const nextMembers = membersRef.current.map(member => {
+          if (member.id !== memberId) return member;
           const attendance = Array.isArray(member.attendance) ? member.attendance : [];
-          if (member.id === memberId && !attendance.includes(todayStr)) {
-            return { ...member, attendance: [todayStr, ...attendance] };
+          const isAlreadyRegistered = attendance.includes(todayStr);
+
+          if (isAlreadyRegistered) return member;
+
+          // Auto-debt logic: if expired, charge daily plan
+          const isExpired = (member.expiryDate || '') < todayStr;
+          let nextBalance = Number(member.balance) || 0;
+
+          if (isExpired) {
+            const dailyPlan = membershipPlans.find(p => p.planKey === 'diario') || { price: 5000 };
+            nextBalance -= dailyPlan.price;
+
+            setMembershipEvents(prev => [{
+              id: createClientId('membership-event'),
+              memberId,
+              eventType: 'manual_adjustment',
+              planKey: 'diario',
+              previousExpiryDate: member.expiryDate,
+              newExpiryDate: member.expiryDate,
+              durationDays: 0,
+              amount: dailyPlan.price,
+              note: 'Cargo por ingreso con membresia vencida',
+              createdAt: new Date().toISOString(),
+            }, ...prev]);
           }
-          return member;
+
+          return { 
+            ...member, 
+            balance: nextBalance,
+            attendance: [todayStr, ...attendance] 
+          };
         });
         membersRef.current = nextMembers;
         setMembers(nextMembers);
         knownCheckinKeysRef.current.add(requestKey);
         return true;
       } finally {
+
         pendingCheckinKeysRef.current.delete(requestKey);
       }
     }

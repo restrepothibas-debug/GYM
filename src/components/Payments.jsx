@@ -79,7 +79,7 @@ function Payments() {
       <form onSubmit={handleCreateMovement} className="payments-form bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Movimiento Contable</h4>
-          <span className="text-[9px] text-slate-500 font-bold">{isRemoteEnabled ? 'Doble partida' : 'Modo local'}</span>
+          <span className="text-[9px] text-slate-500 font-bold">{isRemoteEnabled ? 'Doble partida' : 'Registro contable'}</span>
         </div>
         <div className="grid grid-cols-[110px_1fr] gap-2">
           <label htmlFor="cash-movement-type" className="sr-only">Tipo de movimiento</label>

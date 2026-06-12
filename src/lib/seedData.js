@@ -6,9 +6,9 @@ export const DEFAULT_MEMBERS = [
     name: 'Andres Felipe Mendoza',
     doc: '10029384',
     phone: '3124567890',
-    balance: -20000,
+    balance: 0,
     plan: 'mensual',
-    expiryDate: '2026-06-15',
+    expiryDate: '2026-07-15',
     attendance: ['2026-05-24', '2026-05-25'],
     products: [],
   },
@@ -78,3 +78,4 @@ export function getDefaultCheckinsToday() {
     { memberId: '1', time: '08:30 AM', date: today },
   ];
 }
+

@@ -311,15 +311,12 @@ function App() {
         </div>
 
         <div className="app-header-actions">
-          <button
-            type="button"
-            onClick={signOut}
-            className="h-9 px-4 bg-rose-600 hover:bg-rose-500 text-white transition-all flex items-center gap-2 text-xs font-black rounded-xl shadow-lg shadow-rose-600/20 active:scale-95"
-            aria-label="Cerrar sesión"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Cerrar Sesión</span>
-          </button>
+          {!isRemoteEnabled && (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
+              <ShieldAlert className="w-3 h-3 text-amber-500" />
+              <span className="text-[9px] font-black text-amber-500 uppercase tracking-tight">Modo Local</span>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setIsAddMemberModalOpen(true)}
@@ -476,20 +473,31 @@ function App() {
         )}
       </main>
 
-      {/* BOTTOM NAVIGATION */}
+      {/* BOTTOM NAVIGATION (SIDEBAR ON DESKTOP) */}
       <nav className="app-nav" aria-label="Menu principal">
-        {MAIN_NAV_ITEMS.map(({ icon: Icon, key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            aria-current={activeTab === key ? 'page' : undefined}
-            className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === key ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
-          >
-            <Icon className="w-5 h-5" aria-hidden="true" />
-            <span className="app-nav__label">{label}</span>
-          </button>
-        ))}
+        <div className="app-nav__items">
+          {MAIN_NAV_ITEMS.map(({ icon: Icon, key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              aria-current={activeTab === key ? 'page' : undefined}
+              className={`app-nav__item flex flex-col items-center gap-1 py-1.5 transition-all ${activeTab === key ? 'text-indigo-400 font-bold' : 'text-slate-500 hover:text-slate-400'}`}
+            >
+              <Icon className="w-5 h-5" aria-hidden="true" />
+              <span className="app-nav__label">{label}</span>
+            </button>
+          ))}
+        </div>
+        
+        <button
+          type="button"
+          onClick={signOut}
+          className="app-nav__item app-nav__item--logout flex flex-col items-center gap-1 py-1.5 transition-all text-rose-500 hover:text-rose-400 mt-auto"
+        >
+          <LogOut className="w-5 h-5" aria-hidden="true" />
+          <span className="app-nav__label">Salir</span>
+        </button>
       </nav>
 
       {/* MODALS */}

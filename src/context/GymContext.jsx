@@ -905,10 +905,16 @@ export function GymProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    resetRemoteState();
     if (!supabase) return;
     setError('');
-    await supabase.auth.signOut();
-  }, []);
+    try {
+      await supabase.auth.signOut();
+    } catch (authError) {
+      // Background logout failures are ignored as the local state is already cleared.
+      console.warn('Sign out error:', authError);
+    }
+  }, [resetRemoteState]);
 
   const switchTenant = useCallback((tenantId) => {
     if (!tenants.some(tenant => tenant.id === tenantId)) return;

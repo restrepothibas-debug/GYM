@@ -28,7 +28,13 @@ export function addDaysToDateString(dateStr, days) {
 export function getDaysRemaining(dateStr) {
   const expiry = parseLocalDate(dateStr);
   const today = parseLocalDate(getTodayDateString());
-  return Math.ceil((expiry - today) / 86400000);
+  
+  // Calculate difference in days. 0 means it expires today (still usable).
+  // -1 means it expired yesterday.
+  const diffTime = expiry.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays;
 }
 
 export function formatMembershipStatus(dateStr) {

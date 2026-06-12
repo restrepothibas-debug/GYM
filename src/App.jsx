@@ -225,6 +225,17 @@ function App() {
     workspaceLoaded,
     workspaceLoading,
   } = useContext(GymContext);
+
+  useEffect(() => {
+    if (activeTenant?.brand_color) {
+      document.documentElement.style.setProperty('--app-primary', activeTenant.brand_color);
+      document.documentElement.style.setProperty('--app-brand-primary', activeTenant.brand_color);
+    } else {
+      document.documentElement.style.removeProperty('--app-primary');
+      document.documentElement.style.removeProperty('--app-brand-primary');
+    }
+  }, [activeTenant?.brand_color]);
+
   const cleanSearch = searchQuery.trim().toLowerCase();
   const tenantDisplayName = activeTenant?.name && activeTenant.name !== 'GYM-FLOW'
     ? activeTenant.name
@@ -288,7 +299,11 @@ function App() {
       {/* HEADER */}
       <header className="app-header">
         <div className="app-brand">
-          <Dumbbell className="app-brand__icon" aria-hidden="true" />
+          {activeTenant?.logo_url ? (
+            <img src={activeTenant.logo_url} alt="" className="w-8 h-8 rounded-lg object-contain bg-slate-800/50 p-1" />
+          ) : (
+            <Dumbbell className="app-brand__icon" aria-hidden="true" />
+          )}
           <div className="app-brand__copy">
             <span className="app-brand__product">Syncro-Gym</span>
             <strong className="app-brand__tenant">

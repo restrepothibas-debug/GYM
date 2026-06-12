@@ -126,17 +126,15 @@ function SettingsView({
           meta={activeTenant?.city || activeTenant?.phone || activeTenant?.email || 'Sin datos de contacto'}
           onClick={onOpenGymIdentity}
         />
-        {isRemoteEnabled && (
-          <SettingsModuleButton
-            actionLabel="Salir"
-            icon={LogOut}
-            title="Cerrar sesión"
-            detail="Cuenta remota activa"
-            meta={activeTenant?.role ? `Rol: ${activeTenant.role}` : 'Sesion autenticada'}
-            onClick={onSignOut}
-            tone="danger"
-          />
-        )}
+        <SettingsModuleButton
+          actionLabel="Salir"
+          icon={LogOut}
+          title="Cerrar sesión"
+          detail={isRemoteEnabled ? "Cuenta remota activa" : "Modo local"}
+          meta={activeTenant?.role ? `Rol: ${activeTenant.role}` : 'Sesion autenticada'}
+          onClick={onSignOut}
+          tone="danger"
+        />
       </div>
     </section>
   );
@@ -313,22 +311,15 @@ function App() {
         </div>
 
         <div className="app-header-actions">
-          {isRemoteEnabled ? (
-            <button
-              type="button"
-              onClick={signOut}
-              className="h-9 px-4 bg-rose-600 hover:bg-rose-500 text-white transition-all flex items-center gap-2 text-xs font-black rounded-xl shadow-lg shadow-rose-600/20 active:scale-95"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Cerrar Sesión</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
-              <ShieldAlert className="w-3 h-3 text-amber-500" />
-              <span className="text-[9px] font-black text-amber-500 uppercase tracking-tight">Modo Local</span>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={signOut}
+            className="h-9 px-4 bg-rose-600 hover:bg-rose-500 text-white transition-all flex items-center gap-2 text-xs font-black rounded-xl shadow-lg shadow-rose-600/20 active:scale-95"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Cerrar Sesión</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsAddMemberModalOpen(true)}

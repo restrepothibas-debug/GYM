@@ -502,6 +502,7 @@ export function GymProvider({ children }) {
     knownCheckinKeysRef.current.clear();
     setWorkspaceLoading(false);
     setWorkspaceLoaded(false);
+    setSession(null);
     setDataLoading(false);
     setTenants([]);
     setActiveTenantId(null);

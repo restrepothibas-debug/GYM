@@ -311,12 +311,6 @@ function App() {
         </div>
 
         <div className="app-header-actions">
-          {!isRemoteEnabled && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
-              <ShieldAlert className="w-3 h-3 text-amber-500" />
-              <span className="text-[9px] font-black text-amber-500 uppercase tracking-tight">Modo Local</span>
-            </div>
-          )}
           <button
             type="button"
             onClick={() => setIsAddMemberModalOpen(true)}

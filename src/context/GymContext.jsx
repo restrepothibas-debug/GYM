@@ -503,6 +503,7 @@ export function GymProvider({ children }) {
     setWorkspaceLoading(false);
     setWorkspaceLoaded(false);
     setSession(null);
+    setAuthLoading(false);
     setDataLoading(false);
     setTenants([]);
     setActiveTenantId(null);

@@ -534,7 +534,7 @@ function App() {
       )}
 
       {/* VERSION MARKER */}
-      <div style={{ display: 'none' }} data-app-version="2026.06.13.01" />
+      <div style={{ display: 'none' }} data-app-version="2026.06.13.02" />
 
     </div>
   );

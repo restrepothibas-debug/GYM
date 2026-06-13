@@ -19,6 +19,7 @@ const BIOMETRIC_PROVIDER_KEY = 'gym_biometric_provider';
 const REMOTE_REQUEST_TIMEOUT_MS = 15000;
 const BUTTON_REPEAT_GUARD_MS = 1200;
 const ENABLE_REMOTE_SUPABASE = import.meta.env.MODE !== 'test' && hasSupabaseConfig;
+const IS_PRODUCTION = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname);
 const USE_SEED_DATA = import.meta.env.MODE !== 'test';
 const LOCAL_MEMBER_FALLBACK = USE_SEED_DATA ? DEFAULT_MEMBERS : [];
 const LOCAL_PRODUCT_FALLBACK = USE_SEED_DATA ? DEFAULT_PRODUCTS : [];
@@ -470,6 +471,15 @@ export function GymProvider({ children }) {
       ? []
       : readStorageArray(LOCAL_BIOMETRICS_KEY, []).map(normalizeStoredBiometricEnrollment)
   ));
+
+  useEffect(() => {
+    console.log('[GymFlow] App Mode:', isRemoteEnabled ? 'REMOTE' : 'LOCAL');
+    if (IS_PRODUCTION && !hasSupabaseConfig) {
+      console.error('[GymFlow] Production environment detected but Supabase configuration is missing.');
+      setError('Error de configuración: Faltan variables de entorno de Supabase en producción.');
+    }
+  }, [isRemoteEnabled]);
+
   const [biometricProvider, setBiometricProviderState] = useState(() => (
     getBiometricProvider(readStorageText(BIOMETRIC_PROVIDER_KEY, BIOMETRIC_PROVIDER_IDS.mock)).id
   ));
@@ -508,6 +518,7 @@ export function GymProvider({ children }) {
     setTenants([]);
     setActiveTenantId(null);
     setStoredActiveTenantId(null);
+    setLocalTenant(null);
     setMembers([]);
     setProducts([]);
     setMembershipPlans([]);

@@ -140,21 +140,10 @@ function AuthGate() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 p-2 bg-slate-950/60">
-          <button
-            type="button"
-            onClick={() => setMode('signin')}
-            className={`h-9 rounded-lg text-[10px] font-black transition-all ${mode === 'signin' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-200'}`}
-          >
-            Ingresar
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('signup')}
-            className={`h-9 rounded-lg text-[10px] font-black transition-all ${mode === 'signup' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-200'}`}
-          >
-            Registrarse
-          </button>
+        <div className="p-2 bg-slate-950/60 text-center">
+          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+            Ingresar al sistema
+          </span>
         </div>
 
         <form onSubmit={handleAuth} className="p-5 space-y-4">

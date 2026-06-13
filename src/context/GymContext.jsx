@@ -1478,7 +1478,7 @@ export function GymProvider({ children }) {
       const newMember = {
         id: crypto.randomUUID(),
         ...memberData,
-        balance: initialPayment - planPrice,
+        balance: initialPayment,
         attendance: [],
         products: [],
       };
@@ -1581,41 +1581,41 @@ export function GymProvider({ children }) {
           setCheckinsToday(nextCheckins);
         }
 
-        const nextMembers = membersRef.current.map(member => {
-          if (member.id !== memberId) return member;
-          const attendance = Array.isArray(member.attendance) ? member.attendance : [];
-          const isAlreadyRegistered = attendance.includes(todayStr);
+          const nextMembers = membersRef.current.map(member => {
+            if (member.id !== memberId) return member;
+            const attendance = Array.isArray(member.attendance) ? member.attendance : [];
+            const isAlreadyRegistered = attendance.includes(todayStr);
 
-          if (isAlreadyRegistered) return member;
+            if (isAlreadyRegistered) return member;
 
-          // Auto-debt logic: if expired, charge daily plan
-          const isExpired = (member.expiryDate || '') < todayStr;
-          let nextBalance = Number(member.balance) || 0;
-
-          if (isExpired) {
-            const dailyPlan = membershipPlans.find(p => p.planKey === 'diario') || { price: 5000 };
-            nextBalance -= dailyPlan.price;
+            // Consumption logic: deduct daily plan cost and 1 day of membership
+            const planKey = member.plan;
+            const plan = membershipPlans.find(p => p.planKey === planKey);
+            const dailyCost = (plan && plan.durationDays > 0) ? (plan.price / plan.durationDays) : 5000;
+            
+            const nextBalance = (Number(member.balance) || 0) - dailyCost;
+            const nextExpiry = addDaysToDateString(member.expiryDate, -1);
 
             setMembershipEvents(prev => [{
               id: createClientId('membership-event'),
               memberId,
               eventType: 'manual_adjustment',
-              planKey: 'diario',
+              planKey: planKey,
               previousExpiryDate: member.expiryDate,
-              newExpiryDate: member.expiryDate,
+              newExpiryDate: nextExpiry,
               durationDays: 0,
-              amount: dailyPlan.price,
-              note: 'Cargo por ingreso con membresia vencida',
+              amount: dailyCost,
+              note: 'Consumo diario de membresía',
               createdAt: new Date().toISOString(),
             }, ...prev]);
-          }
 
-          return { 
-            ...member, 
-            balance: nextBalance,
-            attendance: [todayStr, ...attendance] 
-          };
-        });
+            return { 
+              ...member, 
+              balance: nextBalance,
+              expiryDate: nextExpiry,
+              attendance: [todayStr, ...attendance] 
+            };
+          });
         membersRef.current = nextMembers;
         setMembers(nextMembers);
         knownCheckinKeysRef.current.add(requestKey);

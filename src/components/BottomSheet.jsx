@@ -45,7 +45,7 @@ function BottomSheet({ memberId, onClose }) {
   const [isBiometricOpen, setIsBiometricOpen] = useState(false);
   const [isMembershipAdjustmentOpen, setIsMembershipAdjustmentOpen] = useState(false);
   const [manualDate, setManualDate] = useState(getTodayDateString());
-  const [productPayMethod, setProductPayMethod] = useState('credito');
+  const [productPayMethod, setProductPayMethod] = useState('efectivo');
   const [pendingProductId, setPendingProductId] = useState(null);
   const panelTitleId = useId();
   const manualDateId = useId();
@@ -440,7 +440,7 @@ function BottomSheet({ memberId, onClose }) {
                     </span>
                     <em className="member-product-button__action">
                       <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                      {pendingProductId === product.id ? 'Asignando…' : PRODUCT_COPY.assignAction}
+                      {pendingProductId === product.id ? 'Asignando…' : productPayMethod === 'credito' ? 'Cargar a cuenta' : 'Vender ahora'}
                     </em>
                   </button>
                 ))

@@ -9,7 +9,10 @@ export const PRODUCT_PAYMENT_METHOD_LABELS = {
 const PAID_PRODUCT_METHODS = new Set(['efectivo', 'tarjeta']);
 
 export function formatCurrency(value) {
-  return `$${Math.abs(Number(value || 0)).toLocaleString()}`;
+  return `$${Math.abs(Number(value || 0)).toLocaleString('es-CO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 export function normalizeProductMethod(method) {

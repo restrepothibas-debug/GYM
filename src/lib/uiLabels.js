@@ -51,9 +51,9 @@ export const MEMBERSHIP_ADJUSTMENT_COPY = {
 };
 
 export const PRODUCT_COPY = {
-  assignAction: 'Asignar producto',
-  assignToAthleteAction: 'Asignar al atleta',
+  assignAction: 'Vender / Asignar',
+  assignToAthleteAction: 'Vender al atleta',
   empty: 'No hay productos en tienda.',
-  paymentMethodLabel: 'Cobro del producto',
-  title: 'Productos del Atleta',
+  paymentMethodLabel: 'Método de Cobro',
+  title: 'Tienda del Atleta',
 };
